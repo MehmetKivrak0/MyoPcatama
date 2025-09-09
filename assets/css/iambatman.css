@@ -1,0 +1,324 @@
+/* iambatman.php için özel CSS */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #2c3e50;
+    min-height: 100vh;
+    display: flex;
+}
+
+/* Sol taraf - Branding */
+.branding-section {
+    flex: 1;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    background-image: 
+        radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(255,255,255,0.1) 0%, transparent 50%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.branding-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="arch" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M0,10 Q10,0 20,10 Q10,20 0,10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23arch)"/></svg>');
+    opacity: 0.3;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 3rem;
+    z-index: 2;
+}
+
+.logo {
+    width: 50px;
+    height: 50px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.logo-bars {
+    display: flex;
+    gap: 3px;
+}
+
+.logo-bar {
+    width: 4px;
+    height: 20px;
+    background: #2c3e50;
+    border-radius: 2px;
+}
+
+.logo-bar:nth-child(1) { height: 15px; }
+.logo-bar:nth-child(2) { height: 25px; }
+.logo-bar:nth-child(3) { height: 18px; }
+
+.brand-name {
+    color: white;
+    font-size: 1.8rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.tagline {
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 2rem;
+    z-index: 2;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.description {
+    color: rgba(255,255,255,0.8);
+    font-size: 1.1rem;
+    text-align: center;
+    line-height: 1.6;
+    max-width: 400px;
+    z-index: 2;
+}
+
+.pagination {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 2;
+}
+
+.pagination-dot {
+    width: 12px;
+    height: 4px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.pagination-dot.active {
+    background: white;
+    width: 20px;
+}
+
+/* Sağ taraf - Login Form */
+.login-section {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: #f8f9fa;
+}
+
+.login-card {
+    background: white;
+    border-radius: 20px;
+    padding: 3rem;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+.form-header {
+    margin-bottom: 2rem;
+}
+
+.form-subtitle {
+    color: #6c757d;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.5rem;
+}
+
+.form-title {
+    color: #2c3e50;
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-control {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #2c3e50;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
+}
+
+.password-container {
+    margin-right: 37px;
+    position: relative;
+}
+
+
+
+.btn-primary {
+    width: 100%;
+    background: #2c3e50;
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+}
+
+.btn-primary:hover {
+    background: #34495e;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
+}
+
+.separator {
+    text-align: center;
+    margin: 1.5rem 0;
+    position: relative;
+}
+
+.separator::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #e9ecef;
+}
+
+.separator span {
+    background: white;
+    padding: 0 15px;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.social-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+}
+
+.social-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    background: white;
+    color: #2c3e50;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.social-btn:hover {
+    border-color: #2c3e50;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.social-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.login-link {
+    text-align: center;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.login-link a {
+    color: #2c3e50;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.login-link a:hover {
+    text-decoration: underline;
+}
+
+.alert-error {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid #f5c6cb;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    body {
+        flex-direction: column;
+    }
+    
+    .branding-section {
+        min-height: 40vh;
+        padding: 1rem;
+    }
+    
+    .tagline {
+        font-size: 2rem;
+    }
+    
+    .login-card {
+        padding: 2rem;
+        margin: 1rem;
+    }
+    
+    .social-buttons {
+        flex-direction: column;
+    }
+}

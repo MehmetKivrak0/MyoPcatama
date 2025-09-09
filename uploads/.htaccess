@@ -1,0 +1,5 @@
+# Erişimi engelle: Deny from all
+# Deny all access
+
+Order Deny,Allow
+Deny from all
