@@ -8,6 +8,10 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 }
 
 $username = $_SESSION['full_name'] ?? 'Kullanıcı';
+
+// Gerekli modelleri import et
+require_once '../config/db.php';
+require_once '../models/Student.php';
 ?>
 
 <!DOCTYPE html>
@@ -88,9 +92,12 @@ $username = $_SESSION['full_name'] ?? 'Kullanıcı';
                     <button class="btn btn-outline-primary me-2">
                         <i class="fas fa-users me-1"></i>Öğrenciler
                     </button>
-                    <button class="btn btn-outline-success">
-                        <i class="fas fa-desktop me-1"></i>Laboratuvarlar
-                    </button>
+                    <a href="lab_list.php" class="btn btn-outline-success me-2">
+                        <i class="fas fa-building me-1"></i>Laboratuvarlar
+                    </a>
+                    <a href="add_lab.php" class="btn btn-outline-info">
+                        <i class="fas fa-plus me-1"></i>Yeni Laboratuvar
+                    </a>
                 </div>
                 <div class="right-actions">
                     <button class="btn btn-outline-info" onclick="exportAssignments()">
@@ -101,85 +108,148 @@ $username = $_SESSION['full_name'] ?? 'Kullanıcı';
         </div>
 
             
-        <!-- Laboratuvar Seçimi ve Grid Yapısı -->
-        <div class="grid-section">
-            <div class="grid-header">
-                <div class="d-flex justify-content-between align-items-center flex-wrap">
-                <div class="grid-stats mt-3">
-                    <span class="stat-item">
-                        <i class="fas fa-building text-info"></i>
-                        <span class="stat-number" id="selectedLab">-</span>
-                        <span class="stat-label">Laboratuvar</span>
-                    </span>
-                    <span class="stat-item">
-                        <i class="fas fa-desktop text-primary"></i>
-                        <span class="stat-number" id="totalPcs">54</span>
-                        <span class="stat-label">Toplam</span>
-                    </span>
-                    <span class="stat-item clickable-stat" onclick="filterByStatus('assigned')" data-status="assigned">
-                        <i class="fas fa-user-check text-success"></i>
-                        <span class="stat-number" id="assignedPcs">0</span>
-                        <span class="stat-label">Atanmış</span>
-                    </span>
-                    <span class="stat-item clickable-stat" onclick="filterByStatus('available')" data-status="available">
-                        <i class="fas fa-user-times text-warning"></i>
-                        <span class="stat-number" id="availablePcs">54</span>
-                        <span class="stat-label">Boş</span>
-                    </span>
-                </div>
-                
-                <!-- Yıl Filtreleme -->
-                <div class="year-stats mt-3">
-                    <span class="stat-item clickable-year" onclick="filterByYear('')" data-year="">
-                        <i class="fas fa-globe text-primary"></i>
-                        <span class="stat-number">Tümü</span>
-                        <span class="stat-label">Yıllar</span>
-                    </span>
-                    <?php
-                    // Veritabanından yılları çek
-                    require_once '../config/db.php';
-                    require_once '../models/Student.php';
-                    
-                    try {
-                        $db = Database::getInstance();
-                        $studentModel = new Student($db);
-                        $years = $studentModel->getAvailableYears();
-                        
-                        foreach ($years as $yearData) {
-                            $year = $yearData['year'];
-                            echo "<span class=\"stat-item clickable-year\" onclick=\"filterByYear('{$year}')\" data-year=\"{$year}\">";
-                            echo "<i class=\"fas fa-calendar text-success\"></i>";
-                            echo "<span class=\"stat-number\">{$year}</span>";
-                            echo "<span class=\"stat-label\">Yılı</span>";
-                            echo "</span>";
-                        }
-                    } catch (Exception $e) {
-                        // Hata durumunda varsayılan yılları göster
-                        $defaultYears = [2024, 2023, 2022, 2021];
-                        foreach ($defaultYears as $year) {
-                            echo "<span class=\"stat-item clickable-year\" onclick=\"filterByYear('{$year}')\" data-year=\"{$year}\">";
-                            echo "<i class=\"fas fa-calendar text-success\"></i>";
-                            echo "<span class=\"stat-number\">{$year}</span>";
-                            echo "<span class=\"stat-label\">Yılı</span>";
-                            echo "</span>";
-                        }
-                    }
-                    ?>
-                </div>
-                    <div class="lab-selector">
-                        <label for="labSelect" class="form-label me-2">Laboratuvar:</label>
-                        <select class="form-select lab-select" id="labSelect" onchange="changeLab()">
-                            <option value="">Laboratuvar seçin...</option>
-                            <option value="lab1" data-rows="14" data-cols="4" data-total="54">Lab 1 - 54 PC (14x4)</option>
-                            <option value="lab2" data-rows="12" data-cols="4" data-total="48">Lab 2 - 48 PC (12x4)</option>
-                            <option value="lab3" data-rows="14" data-cols="4" data-total="56">Lab 3 - 56 PC (14x4)</option>
-                            <option value="lab4" data-rows="13" data-cols="4" data-total="50">Lab 4 - 50 PC (13x4)</option>
-                            <option value="lab5" data-rows="11" data-cols="4" data-total="42">Lab 5 - 42 PC (11x4)</option>
-                        </select>
-                    </div>
+        <!-- Ultra Modern Dashboard Header -->
+        <div class="dashboard-header">
+            <div class="container-fluid px-4">
+                <!-- Üst Bölüm: Laboratuvar Seçimi -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="lab-selection-card">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="lab-info-section">
+                                    <div class="lab-icon-wrapper">
+                                        <i class="fas fa-building"></i>
+                                    </div>
+                                    <div class="lab-details">
+                                        <h2 class="lab-title" id="selectedLabName" onclick="openAssignmentModal()" style="cursor: pointer;">Laboratuvar Seçin</h2>
+                                    </div>
+                                </div>
+                                <div class="lab-selector-wrapper">
+                                    <div class="d-flex gap-2">
+                                        <select class="form-select lab-selector" id="labSelect" onchange="changeLab()">
+                                            <option value="">Laboratuvar seçin...</option>
+                                            <?php
+                                            // Veritabanından laboratuvarları çek
+                                            require_once '../controllers/LabController.php';
+                                            
+                                            try {
+                                                $labController = new LabController();
+                                                $labsResult = $labController->getAllLabs();
+                                                
+                                                if ($labsResult['type'] === 'success') {
+                                                    foreach ($labsResult['data'] as $lab) {
+                                                        $rows = ceil($lab['pc_count'] / 4);
+                                                        $labName = $lab['lab_name'] ?? 'Bilinmeyen';
+                                                        $userType = $lab['user_type'] ?? 'Bilinmeyen';
+                                                        $pcNumber = preg_match('/PC\d+/', $labName, $matches) ? $matches[0] : 'PC?';
+                                                        echo "<option value=\"{$lab['computer_id']}\" data-rows=\"{$rows}\" data-cols=\"4\" data-total=\"{$lab['pc_count']}\" data-fullname=\"" . htmlspecialchars($labName) . "\">";
+                                                        echo htmlspecialchars($userType) . " - {$lab['pc_count']} PC ({$rows}x4)";
+                                                        echo "</option>";
+                                                    }
+                                                }
+                                            } catch (Exception $e) {
+                                                echo '<option value="lab1" data-rows="14" data-cols="4" data-total="54" data-fullname="Bil_Mekanik-PC50">PC50 - 54 PC (14x4)</option>';
+                                                echo '<option value="lab2" data-rows="12" data-cols="4" data-total="48" data-fullname="Bil_ögr-PC48">PC48 - 48 PC (12x4)</option>';
+                                                echo '<option value="lab3" data-rows="14" data-cols="4" data-total="56" data-fullname="Bil_admin-PC56">PC56 - 56 PC (14x4)</option>';
+                                            }
+                                            ?>
+                                        </select>
+                                        <!-- PC Düzenleme Butonu -->
+                                        <button class="btn btn-outline-primary btn-sm" id="pcEditButton" onclick="editPCCount()" style="display: none;" title="PC Sayısını Düzenle">
+                                            <i class="fas fa-edit me-1"></i>PC Düzenle
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                </div>
                 
+                <!-- Alt Bölüm: İstatistikler ve Filtreler -->
+                <div class="row">
+                    <!-- İstatistik Kartları -->
+                    <div class="col-lg-8 col-md-12 mb-4">
+                        <div class="stats-container">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="stat-card total-card">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-desktop"></i>
+                                        </div>
+                                        <div class="stat-info">
+                                            <h3 class="stat-number" id="totalPcs">0</h3>
+                                            <p class="stat-label">Toplam PC</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="stat-card assigned-card clickable-stat" onclick="filterByStatus('assigned')" data-status="assigned">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-user-check"></i>
+                                        </div>
+                                        <div class="stat-info">
+                                            <h3 class="stat-number" id="assignedPcs">0</h3>
+                                            <p class="stat-label">Atanmış</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="stat-card available-card clickable-stat" onclick="filterByStatus('available')" data-status="available">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-user-times"></i>
+                                        </div>
+                                        <div class="stat-info">
+                                            <h3 class="stat-number" id="availablePcs">0</h3>
+                                            <p class="stat-label">Boş</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Filtreler -->
+                    <div class="col-lg-4 col-md-12 mb-4">
+                        <div class="filters-card">
+                            
+                        
+                            <div class="year-filters">
+                                <h6 class="filter-section-title">Yıl Seçimi</h6>
+                                <div class="year-buttons">
+                                    <button class="year-btn active" onclick="filterByYear('')" data-year="">
+                                        <i class="fas fa-globe"></i>
+                                        <span>Tümü</span>
+                                    </button>
+                                    <?php
+                                    try {
+                                        $db = Database::getInstance();
+                                        $studentModel = new Student($db);
+                                        $years = $studentModel->getAvailableYears();
+                                        
+                                        foreach ($years as $yearData) {
+                                            $year = $yearData['year'];
+                                            echo "<button class=\"year-btn\" onclick=\"filterByYear('{$year}')\" data-year=\"{$year}\">";
+                                            echo "<i class=\"fas fa-calendar\"></i>";
+                                            echo "<span>{$year}</span>";
+                                            echo "</button>";
+                                        }
+                                    } catch (Exception $e) {
+                                        $defaultYears = [2024, 2023, 2022, 2021];
+                                        foreach ($defaultYears as $year) {
+                                            echo "<button class=\"year-btn\" onclick=\"filterByYear('{$year}')\" data-year=\"{$year}\">";
+                                            echo "<i class=\"fas fa-calendar\"></i>";
+                                            echo "<span>{$year}</span>";
+                                            echo "</button>";
+                                        }
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
+        </div>
             
             <div class="pc-grid" id="pcGrid">
                 <!-- 54 adet bilgisayar kartı buraya gelecek -->
@@ -333,11 +403,21 @@ $username = $_SESSION['full_name'] ?? 'Kullanıcı';
                                         </label>
                                         <select class="form-select form-select-lg" id="labSelectModal" onchange="changeLabModal()">
                                             <option value="">Laboratuvar seçin...</option>
-                                            <option value="lab1" data-rows="14" data-cols="4" data-total="54">Lab 1 - 54 PC (14x4)</option>
-                                            <option value="lab2" data-rows="12" data-cols="4" data-total="48">Lab 2 - 48 PC (12x4)</option>
-                                            <option value="lab3" data-rows="14" data-cols="4" data-total="56">Lab 3 - 56 PC (14x4)</option>
-                                            <option value="lab4" data-rows="13" data-cols="4" data-total="50">Lab 4 - 50 PC (13x4)</option>
-                                            <option value="lab5" data-rows="11" data-cols="4" data-total="42">Lab 5 - 42 PC (11x4)</option>
+                                            <?php
+                                            // Modal için de aynı laboratuvar listesini kullan
+                                            if (isset($labController)) {
+                                                $labsResult = $labController->getAllLabs();
+                                                if ($labsResult['type'] === 'success') {
+                                                    foreach ($labsResult['data'] as $lab) {
+                                                        $rows = ceil($lab['pc_count'] / 4);
+                                                        $userType = $lab['user_type'] ?? 'Bilinmeyen';
+                                                        echo "<option value=\"{$lab['computer_id']}\" data-rows=\"{$rows}\" data-cols=\"4\" data-total=\"{$lab['pc_count']}\">";
+                                                        echo htmlspecialchars($userType) . " - {$lab['pc_count']} PC ({$rows}x4)";
+                                                        echo "</option>";
+                                                    }
+                                                }
+                                            }
+                                            ?>
                                         </select>
                                     </div>
                                 </div>
@@ -379,6 +459,34 @@ $username = $_SESSION['full_name'] ?? 'Kullanıcı';
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- PC Sayısını Düzenleme Modal -->
+    <div class="modal fade" id="editPCCountModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>PC Sayısını Düzenle
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="newPCCount" class="form-label">Yeni PC Sayısı</label>
+                        <input type="number" class="form-control" id="newPCCount" min="0" max="1000" value="0">
+                        <div class="form-text">Mevcut PC sayısı: <span id="currentPCCountEdit">0</span></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-info" onclick="confirmEditPCCount()">
+                        <i class="fas fa-save me-1"></i>Kaydet
+                    </button>
                 </div>
             </div>
         </div>

@@ -1,9 +1,30 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // 54'lü grid yapısını oluştur
-    createPCGrid();
+    // URL parametrelerini kontrol et
+    const urlParams = new URLSearchParams(window.location.search);
+    const labId = urlParams.get('lab_id');
+    const pcManagement = urlParams.get('pc_management');
     
-    // İstatistik kartlarını başlangıçta güncelle
-    updateStatsCards();
+    // Başlangıçta grid oluşturma, laboratuvar seçilene kadar boş bırak
+    showEmptyState();
+    
+    // İstatistikleri sıfırla
+    clearLabSelection();
+    
+    // Eğer URL'de lab_id varsa, o laboratuvarı seç
+    if (labId) {
+        const labSelect = document.getElementById('labSelect');
+        if (labSelect) {
+            labSelect.value = labId;
+            changeLab();
+            
+            // Eğer PC yönetim modu açılmak isteniyorsa, PC sayısını düzenle modalını aç
+            if (pcManagement === 'true') {
+                setTimeout(() => {
+                    editPCCount();
+                }, 500); // Laboratuvar yüklendikten sonra modalı aç
+            }
+        }
+    }
     
     // Modal içindeki atama butonu event listener
     document.getElementById('assignBtnModal').addEventListener('click', function() {
@@ -40,6 +61,18 @@ let currentLab = null;
 let currentRows = 9;
 let currentCols = 4;
 let currentTotal = 54;
+
+// Mevcut laboratuvar ismini al
+function getCurrentLabName() {
+    const labSelect = document.getElementById('labSelect');
+    if (!labSelect || !currentLab) return '';
+    
+    const selectedOption = labSelect.options[labSelect.selectedIndex];
+    if (selectedOption && selectedOption.text) {
+        return selectedOption.text.split(' - ')[0]; // Kullanıcı tipini al (örn: "Mekanik")
+    }
+    return '';
+}
 let currentFilter = null; // 'assigned', 'available', null
 let currentYear = null; // yıl filtresi
 
@@ -81,6 +114,18 @@ function showToast(message, type = 'info') {
     bsToast.show();
 }
 
+function showEmptyState() {
+    const grid = document.getElementById('pcGrid');
+    grid.innerHTML = `
+        <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: #666;">
+            <i class="fas fa-building" style="font-size: 4rem; color: #ddd; margin-bottom: 1rem;"></i>
+            <h3>Laboratuvar Seçin</h3>
+            <p>PC'leri görüntülemek için yukarıdan bir laboratuvar seçin.</p>
+        </div>
+    `;
+    grid.style.gridTemplateColumns = '1fr';
+}
+
 function createPCGrid() {
     const grid = document.getElementById('pcGrid');
     grid.innerHTML = '';
@@ -94,7 +139,9 @@ function createPCGrid() {
         pcCard.className = 'pc-card';
         pcCard.id = `pc-${i}`;
         pcCard.innerHTML = `
-            <div class="pc-number">PC${i.toString().padStart(2, '0')}</div>
+            <div class="pc-number">
+                <span class="lab-name">${getCurrentLabName()}</span> PC${i.toString().padStart(2, '0')}
+            </div>
             <div class="pc-status available">
                 <i class="fas fa-desktop"></i>
                 <span>Boş</span>
@@ -129,25 +176,48 @@ function changeLab() {
     updateYearButtons();
     
     if (selectedOption.value === '') {
-        // Varsayılan değerler
+        // Laboratuvar seçilmediğinde boş durumu göster
         currentLab = null;
-        currentRows = 9;
-        currentCols = 4;
-        currentTotal = 54;
+        currentRows = 0;
+        currentCols = 0;
+        currentTotal = 0;
+        showEmptyState();
+        updateSelectedLabCard('', '');
+        
+        // PC düzenleme butonunu gizle
+        document.getElementById('pcEditButton').style.display = 'none';
     } else {
         // Seçilen laboratuvar bilgilerini al
         currentLab = selectedOption.value;
         currentRows = parseInt(selectedOption.dataset.rows);
         currentCols = parseInt(selectedOption.dataset.cols);
         currentTotal = parseInt(selectedOption.dataset.total);
+        
+        // Seçili laboratuvar kartını güncelle
+        const displayName = selectedOption.text.split(' - ')[0]; // Kullanıcı tipini al (örn: "Mekanik")
+        updateSelectedLabCard(displayName, selectedOption.text);
+        
+        // PC düzenleme butonunu göster
+        document.getElementById('pcEditButton').style.display = 'block';
+        
+        // Grid'i oluştur
+        createPCGrid();
+        updateStats();
     }
-    
-    // Grid'i yeniden oluştur
-    createPCGrid();
-    updateStats();
     
     // İstatistik kartlarını güncelle
     updateStatsCards();
+}
+
+// Seçili laboratuvar kartını güncelle
+function updateSelectedLabCard(labName, labInfo) {
+    const selectedLabName = document.getElementById('selectedLabName');
+    
+    if (labName) {
+        selectedLabName.textContent = labName;
+    } else {
+        selectedLabName.textContent = 'Laboratuvar Seçin';
+    }
 }
 
 function updateStatsCards() {
@@ -177,6 +247,16 @@ function updateStatsCards() {
         statNumbers[2].textContent = assignedPcs;
         // Boş PC sayısı
         statNumbers[3].textContent = availablePcs;
+    }
+    
+    // Laboratuvar seçilmediğinde istatistikleri sıfırla
+    if (selectedOption.value === '') {
+        if (statNumbers.length >= 4) {
+            statNumbers[0].textContent = '-';
+            statNumbers[1].textContent = '0';
+            statNumbers[2].textContent = '0';
+            statNumbers[3].textContent = '0';
+        }
     }
 }
 
@@ -286,14 +366,14 @@ function updateFilterButtons() {
 }
 
 function updateYearButtons() {
-    const yearCards = document.querySelectorAll('.clickable-year');
+    const yearButtons = document.querySelectorAll('.year-btn');
     
-    yearCards.forEach(card => {
-        const year = card.dataset.year;
+    yearButtons.forEach(button => {
+        const year = button.dataset.year;
         if (currentYear === year) {
-            card.classList.add('active-year-filter');
+            button.classList.add('active');
         } else {
-            card.classList.remove('active-year-filter');
+            button.classList.remove('active');
         }
     });
 }
@@ -332,7 +412,12 @@ function updateStudentDropdownModal() {
         },
         body: 'action=get_all_students'
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('HTTP error! status: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             data.students.forEach(student => {
@@ -366,7 +451,12 @@ function updateStudentDropdownByYear(year) {
         },
         body: `action=get_students_by_year&year=${year}`
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('HTTP error! status: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             data.students.forEach(student => {
@@ -737,4 +827,139 @@ function refreshAssignments() {
     updateStats();
     
     showToast('Atamalar yenilendi!', 'success');
+}
+
+// Modal Açma Fonksiyonları
+function openAssignmentModal() {
+    // Modal açılmadan önce seçili labı temizle
+    clearLabSelection();
+    
+    // Modal içindeki dropdown'ları da temizle
+    const labSelectModal = document.getElementById('labSelectModal');
+    if (labSelectModal) {
+        labSelectModal.value = '';
+    }
+    
+    const studentSelectModal = document.getElementById('studentSelectModal');
+    if (studentSelectModal) {
+        studentSelectModal.innerHTML = '<option value="">Öğrenci seçin...</option>';
+    }
+    
+    const pcSelectModal = document.getElementById('pcSelectModal');
+    if (pcSelectModal) {
+        pcSelectModal.innerHTML = '<option value="">Bilgisayar seçin...</option>';
+    }
+    
+    // Modal'ı aç
+    const modal = new bootstrap.Modal(document.getElementById('assignmentFormModal'));
+    modal.show();
+    
+    // Öğrenci listesini yeniden yükle
+    updateStudentDropdownModal();
+}
+
+// Seçili labı temizle
+function clearLabSelection() {
+    // Ana dropdown'ı temizle
+    const labSelect = document.getElementById('labSelect');
+    if (labSelect) {
+        labSelect.value = '';
+    }
+    
+    // Modal dropdown'ı temizle
+    const labSelectModal = document.getElementById('labSelectModal');
+    if (labSelectModal) {
+        labSelectModal.value = '';
+    }
+    
+    // Seçili lab kartını temizle
+    const selectedLabName = document.getElementById('selectedLabName');
+    if (selectedLabName) {
+        selectedLabName.textContent = 'Laboratuvar Seçin';
+    }
+    
+    // PC düzenleme butonunu gizle
+    const pcEditButton = document.getElementById('pcEditButton');
+    if (pcEditButton) {
+        pcEditButton.style.display = 'none';
+    }
+    
+    // Global değişkenleri sıfırla
+    currentLab = null;
+    currentRows = 0;
+    currentCols = 0;
+    currentTotal = 0;
+    
+    // PC grid'i temizle
+    const pcGrid = document.getElementById('pcGrid');
+    if (pcGrid) {
+        pcGrid.innerHTML = '';
+    }
+    
+    // İstatistikleri sıfırla
+    updateStats();
+    
+    // İstatistik kartlarını manuel olarak sıfırla
+    const totalPcsElement = document.getElementById('totalPcs');
+    const assignedPcsElement = document.getElementById('assignedPcs');
+    const availablePcsElement = document.getElementById('availablePcs');
+    
+    if (totalPcsElement) totalPcsElement.textContent = '0';
+    if (assignedPcsElement) assignedPcsElement.textContent = '0';
+    if (availablePcsElement) availablePcsElement.textContent = '0';
+}
+
+// PC Yönetim Fonksiyonları
+function editPCCount() {
+    if (!currentLab) {
+        showToast('Lütfen önce bir laboratuvar seçin!', 'warning');
+        return;
+    }
+    
+    // Mevcut PC sayısını göster
+    document.getElementById('currentPCCountEdit').textContent = currentTotal;
+    document.getElementById('newPCCount').value = currentTotal;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editPCCountModal'));
+    modal.show();
+}
+
+function confirmEditPCCount() {
+    const newCount = parseInt(document.getElementById('newPCCount').value);
+    
+    if (newCount < 0 || newCount > 1000) {
+        showToast('PC sayısı 0-1000 arasında olmalıdır!', 'error');
+        return;
+    }
+    
+    fetch('pc_management.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            action: 'update',
+            lab_id: currentLab,
+            count: newCount
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.type === 'success') {
+            showToast(data.message, 'success');
+            // Modal'ı kapat
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editPCCountModal'));
+            modal.hide();
+            // URL'den pc_management parametresini temizle ve sayfayı yenile
+            const url = new URL(window.location);
+            url.searchParams.delete('pc_management');
+            window.history.replaceState({}, '', url);
+            location.reload();
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Bir hata oluştu: ' + error.message, 'error');
+    });
 }
