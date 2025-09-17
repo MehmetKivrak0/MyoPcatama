@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Test Sayfası</h1>
+    <div id="results"></div>
+    
+    <script>
+        function testAPI() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Test ediliyor...</p>';
+            
+            // Test 1: Lab Controller
+            fetch('controllers/LabController.php?action=get_lab_count')
+                .then(response => {
+                    console.log('Lab Controller Response:', response);
+                    return response.text();
+                })
+                .then(text => {
+                    console.log('Lab Controller Text:', text);
+                    resultsDiv.innerHTML += '<h3>Lab Controller Test:</h3><pre>' + text + '</pre>';
+                })
+                .catch(error => {
+                    console.error('Lab Controller Error:', error);
+                    resultsDiv.innerHTML += '<h3>Lab Controller Error:</h3><p style="color:red">' + error + '</p>';
+                });
+            
+            // Test 2: Assignment Controller
+            fetch('controllers/AssignmentController.php?action=get_lab_pcs&lab_id=1')
+                .then(response => {
+                    console.log('Assignment Controller Response:', response);
+                    return response.text();
+                })
+                .then(text => {
+                    console.log('Assignment Controller Text:', text);
+                    resultsDiv.innerHTML += '<h3>Assignment Controller Test:</h3><pre>' + text + '</pre>';
+                })
+                .catch(error => {
+                    console.error('Assignment Controller Error:', error);
+                    resultsDiv.innerHTML += '<h3>Assignment Controller Error:</h3><p style="color:red">' + error + '</p>';
+                });
+        }
+        
+        // Sayfa yüklendiğinde test et
+        window.onload = testAPI;
+    </script>
+</body>
+</html>

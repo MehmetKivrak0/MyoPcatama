@@ -757,4 +757,65 @@ class Assignment {
             ];
         }
     }
+
+    /**
+     * Laboratuvar bilgilerini getir
+     * Get lab information
+     */
+    public function getLabInfo($labId) {
+        try {
+            $sql = "SELECT computer_id, lab_name, pc_count, user_type, created_at, updated_at, created_by 
+                    FROM myopc_lab_computers 
+                    WHERE computer_id = ?";
+            $result = $this->db->fetchOne($sql, [$labId]);
+            return $result;
+        } catch (Exception $e) {
+            error_log("getLabInfo hatası: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Laboratuvar PC'lerini ve atamalarını getir
+     * Get lab PCs with assignments
+     */
+    public function getLabPCsWithAssignments($labId) {
+        try {
+            $pcs = [];
+            
+            // Laboratuvar bilgilerini al
+            $labInfo = $this->getLabInfo($labId);
+            if (!$labInfo) {
+                return [];
+            }
+            
+            $pcCount = $labInfo['pc_count'];
+            
+            // Her PC için veri oluştur
+            for ($i = 1; $i <= $pcCount; $i++) {
+                $pcId = $labId * 100 + $i;
+                $pcNumber = $i;
+                
+                // Bu PC'ye atanmış öğrencileri getir
+                $sql = "SELECT s.full_name, s.academic_year, s.sdt_nmbr
+                        FROM myopc_assignments a
+                        JOIN myopc_students s ON a.student_id = s.student_id
+                        WHERE a.computer_id = ?";
+                $students = $this->db->fetchAll($sql, [$pcId]);
+                
+                $pcs[] = [
+                    'pc_id' => $pcId,
+                    'pc_number' => $pcNumber,
+                    'students' => $students,
+                    'is_occupied' => !empty($students)
+                ];
+            }
+            
+            return $pcs;
+            
+        } catch (Exception $e) {
+            error_log("getLabPCsWithAssignments hatası: " . $e->getMessage());
+            return [];
+        }
+    }
 }

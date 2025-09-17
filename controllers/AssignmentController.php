@@ -581,32 +581,42 @@ class AssignmentController {
     /**
      * Laboratuvar PC'lerini getir (güncelleme için)
      */
-    public function getLabPCs() {
-        error_reporting(0);
-        ini_set('display_errors', 0);
-        ob_clean();
-
+    public function getLabPCs($labId = null) {
         try {
-            $computerId = $_GET['computer_id'] ?? null;
-            error_log("🔍 getLabPCs çağrıldı - computerId: " . $computerId);
-
+            // Eğer parametre olarak labId gelmemişse GET'ten al
+            $computerId = $labId ?? $_GET['lab_id'] ?? $_GET['computer_id'] ?? null;
+            
             if (!$computerId) {
-                throw new Exception("Laboratuvar ID gerekli");
+                $this->sendJsonResponse([
+                    'success' => false,
+                    'message' => 'Laboratuvar ID gerekli - labId: ' . $labId . ', GET lab_id: ' . ($_GET['lab_id'] ?? 'yok')
+                ]);
+                return;
             }
 
-            $pcs = $this->assignmentModel->getPCAssignmentsByLab($computerId);
-            error_log("📋 PC'ler alındı - sayı: " . count($pcs));
+            // Laboratuvar bilgilerini al
+            $labInfo = $this->assignmentModel->getLabInfo($computerId);
+            if (!$labInfo) {
+                $this->sendJsonResponse([
+                    'success' => false,
+                    'message' => 'Laboratuvar bulunamadı - ID: ' . $computerId
+                ]);
+                return;
+            }
+
+            // PC'leri ve atamalarını al
+            $pcs = $this->assignmentModel->getLabPCsWithAssignments($computerId);
 
             $this->sendJsonResponse([
                 'success' => true,
-                'pcs' => $pcs
+                'pcs' => $pcs,
+                'lab_info' => $labInfo
             ]);
 
         } catch (Exception $e) {
-            error_log("Laboratuvar PC'leri alınırken hata: " . $e->getMessage());
             $this->sendJsonResponse([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Hata: ' . $e->getMessage()
             ]);
         }
     }
@@ -1299,6 +1309,7 @@ class AssignmentController {
         }
     }
 
+
     /**
      * Atama istatistiklerini Excel formatında dışa aktar
      */
@@ -1499,6 +1510,20 @@ if (basename($_SERVER['PHP_SELF']) === 'AssignmentController.php') {
             break;
         case 'export_assignment_stats':
             $controller->exportAssignmentStats();
+            break;
+        case 'get_lab_pcs':
+            $labId = $_GET['lab_id'] ?? null;
+            error_log("get_lab_pcs action - labId: " . $labId);
+            if ($labId) {
+                $controller->getLabPCs($labId);
+            } else {
+                error_log("get_lab_pcs action - labId boş");
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Laboratuvar ID gerekli'
+                ]);
+            }
             break;
         default:
             // Varsayılan olarak JSON response döndür

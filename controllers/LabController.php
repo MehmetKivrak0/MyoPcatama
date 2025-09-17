@@ -344,6 +344,11 @@ if (basename($_SERVER['PHP_SELF']) === 'LabController.php') {
             header('Content-Type: application/json');
             echo json_encode($result);
             break;
+        case 'get_all_labs':
+            $result = $controller->getAllLabs();
+            header('Content-Type: application/json');
+            echo json_encode($result);
+            break;
         default:
             header('Content-Type: application/json');
             echo json_encode([
