@@ -1,11 +1,10 @@
 <?php
 session_start();
 
-// Tüm session verilerini temizle
-session_unset();
+// Oturumu sonlandır
 session_destroy();
 
-// index.html'e yönlendir
-header("Location: index.html");
-exit();
+// Giriş sayfasına yönlendir
+header('Location: index.html');
+exit;
 ?>

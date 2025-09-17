@@ -52,38 +52,47 @@ if ($_POST) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&display=swap" rel="stylesheet">
-    <link href="../assets/css/dashboard.css" rel="stylesheet">
+    
+    <!-- Mevcut CSS Files -->
+    <link href="../assets/css/navbar.css" rel="stylesheet">
     <style>
-        .lab-form-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        /* Dashboard ile tutarlı navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #4a90a4 100%) !important;
+            box-shadow: 0 4px 20px rgba(30, 58, 95, 0.3);
         }
         
-        .form-header {
-            text-align: center;
-            margin-bottom: 2rem;
+        body {
+            padding-top: 80px;
+            background: #f8f9fa;
+        }
+        
+        .main-content {
+            margin-top: 20px;
+            min-height: calc(100vh - 100px);
+        }
+        
+        /* Dashboard tarzı stats card */
+        .stats-card {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #4a90a4 100%);
             color: white;
-        }
-        
-        .form-header h2 {
-            font-weight: 900;
-            margin-bottom: 0.5rem;
-        }
-        
-        .form-header p {
-            opacity: 0.9;
-            font-size: 1.1rem;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(30, 58, 95, 0.3);
         }
         
         .form-card {
             background: white;
             border-radius: 15px;
             padding: 2rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e1e5e9;
         }
         
         .form-group {
@@ -200,19 +209,47 @@ if ($_POST) {
     </style>
 </head>
 <body>
-    <div class="container-fluid min-vh-100 d-flex align-items-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div class="container">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 100%); border-bottom: 1px solid #e5e7eb;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="dashboard.php">
+                <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" style="width: 35px; height: auto; margin-right: 10px;">
+                <div class="brand-text">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #fff;">MyoPC</div>
+                    <div style="font-size: 0.9rem; opacity: 0.9;">Laboratuvar Ekle</div>
+                </div>
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="dashboard.php">
+                    <i class="fas fa-arrow-left me-1"></i>Dashboard'a Dön
+                </a>
+                <a class="nav-link" href="lab_list.php">
+                    <i class="fas fa-building me-1"></i>Laboratuvarlar
+                </a>
+                <a class="nav-link" href="../logout.php">
+                    <i class="fas fa-sign-out-alt me-1"></i>Çıkış Yap
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="container-fluid px-4">
+            <!-- İstatistikler -->
+            <div class="stats-card">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="text-center">
+                            <h2><i class="fas fa-building me-2"></i>Yeni Laboratuvar Ekle</h2>
+                            <p class="mb-0">Laboratuvar adı ve PC sayısını belirleyerek yeni bir laboratuvar oluşturun</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="row justify-content-center">
                 <div class="col-lg-8">
-                    <a href="dashboard.php" class="back-btn" title="Dashboard'a Dön">
-                        <i class="fas fa-arrow-left"></i>
-                    </a>
-                    
-                    <div class="lab-form-container">
-                        <div class="form-header">
-                            <h2><i class="fas fa-building me-2"></i>Yeni Laboratuvar Ekle</h2>
-                            <p>Laboratuvar adı ve PC sayısını belirleyerek yeni bir laboratuvar oluşturun</p>
-                        </div>
                         
                         <div class="form-card">
                             <?php if ($message): ?>

@@ -12,6 +12,31 @@ $username = $_SESSION['full_name'] ?? 'Kullanıcı';
 // Gerekli modelleri import et
 require_once '../config/db.php';
 require_once '../models/Student.php';
+require_once '../models/Lab.php';
+require_once '../models/Assignment.php';
+
+// Detaylı istatistikleri al
+try {
+    $db = Database::getInstance();
+    
+    // Öğrenci sayısı - myopc_students tablosundan
+    $studentCount = $db->fetchOne("SELECT COUNT(*) as count FROM myopc_students")['count'] ?? 0;
+    
+    // Lab sayısı - myopc_lab_computers tablosundan
+    $labCount = $db->fetchOne("SELECT COUNT(*) as count FROM myopc_lab_computers")['count'] ?? 0;
+    
+    // Toplam atama sayısı - myopc_assignments tablosundan
+    $assignmentCount = $db->fetchOne("SELECT COUNT(*) as count FROM myopc_assignments")['count'] ?? 0;
+    
+    // Son eklenen öğrenciler
+    $recentStudents = $db->fetchAll("SELECT student_name, student_surname, created_at FROM myopc_students ORDER BY created_at DESC LIMIT 5");
+    
+} catch (Exception $e) {
+    $studentCount = 0;
+    $labCount = 0;
+    $assignmentCount = 0;
+    $recentStudents = [];
+}
 ?>
 
 <!DOCTYPE html>
@@ -19,480 +44,874 @@ require_once '../models/Student.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - MyoPc </title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Dashboard - MyOPC Yönetim Sistemi</title>
+    
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&display=swap" rel="stylesheet">
-    <link href="../assets/css/dashboard.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Dashboard CSS -->
+    <link href="css/dashboard.css?v=<?php echo time(); ?>" rel="stylesheet">
+    <link href="css/pc-update.css?v=<?php echo time(); ?>" rel="stylesheet">
+    <link href="css/student_cards.css?v=<?php echo time(); ?>" rel="stylesheet">
+    
+    <!-- Export Button Styles -->
+    <style>
+        .action-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #6c757d !important;
+            border-color: #6c757d !important;
+        }
+        
+        .action-button:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .action-button:disabled i {
+            color: #adb5bd !important;
+        }
+    </style>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <!-- Top Header Bar -->
+    <div class="top-header-bar" style="background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 100%); border-bottom: 1px solid #e5e7eb;">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" class="img-fluid" style="width: 35px; height: auto;">
-                <div class="brand-text">
-                    <div class="text-blue">MyoPC</div>
-                    <div class="text-white"> Atama Sistemi</div>
-                </div>
-            </a>
-            
-            <!-- Mini Stats in Navbar -->
-            <div class="navbar-stats d-none d-lg-flex">
-                <div class="navbar-stat-item">
-                    <i class="fas fa-users"></i>
-                    <span class="stat-number">0</span>
-                    <span class="stat-label">Öğrenci</span>
-                </div>
-                <div class="navbar-stat-item">
-                    <i class="fas fa-desktop"></i>
-                    <span class="stat-number">0</span>
-                    <span class="stat-label">Bilgisayar</span>
-                </div>
-                <div class="navbar-stat-item">
-                    <i class="fas fa-building"></i>
-                    <span class="stat-number">0</span>
-                    <span class="stat-label">Laboratuvar</span>
-                </div>
-                <div class="navbar-stat-item">
-                    <i class="fas fa-tasks"></i>
-                    <span class="stat-number">0</span>
-                    <span class="stat-label">Atama</span>
-                </div>
-            </div>
-            
-            <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            <i class="fas fa-file-csv me-1"></i>CSV Import
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="../logout.php">
-                            <i class="fas fa-sign-out-alt me-1"></i>Çıkış Yap
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Top Action Buttons -->
-        <div class="top-actions mb-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="left-actions">
-                    <button class="btn btn-outline-primary me-2">
-                        <i class="fas fa-users me-1"></i>Öğrenciler
-                    </button>
-                    <a href="lab_list.php" class="btn btn-outline-success me-2">
-                        <i class="fas fa-building me-1"></i>Laboratuvarlar
-                    </a>
-                    <a href="add_lab.php" class="btn btn-outline-info">
-                        <i class="fas fa-plus me-1"></i>Yeni Laboratuvar
-                    </a>
-                </div>
-                <div class="right-actions">
-                    <button class="btn btn-outline-info" onclick="exportAssignments()">
-                        <i class="fas fa-download me-1"></i>Atamaları Dışa Aktar
-                    </button>
-                </div>
-            </div>
-        </div>
-
-            
-        <!-- Ultra Modern Dashboard Header -->
-        <div class="dashboard-header">
-            <div class="container-fluid px-4">
-                <!-- Üst Bölüm: Laboratuvar Seçimi -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="lab-selection-card">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="lab-info-section">
-                                    <div class="lab-icon-wrapper">
-                                        <i class="fas fa-building"></i>
-                                    </div>
-                                    <div class="lab-details">
-                                        <h2 class="lab-title" id="selectedLabName" onclick="openAssignmentModal()" style="cursor: pointer;">Laboratuvar Seçin</h2>
-                                    </div>
-                                </div>
-                                <div class="lab-selector-wrapper">
-                                    <div class="d-flex gap-2">
-                                        <select class="form-select lab-selector" id="labSelect" onchange="changeLab()">
-                                            <option value="">Laboratuvar seçin...</option>
-                                            <?php
-                                            // Veritabanından laboratuvarları çek
-                                            require_once '../controllers/LabController.php';
-                                            
-                                            try {
-                                                $labController = new LabController();
-                                                $labsResult = $labController->getAllLabs();
-                                                
-                                                if ($labsResult['type'] === 'success') {
-                                                    foreach ($labsResult['data'] as $lab) {
-                                                        $rows = ceil($lab['pc_count'] / 4);
-                                                        $labName = $lab['lab_name'] ?? 'Bilinmeyen';
-                                                        $userType = $lab['user_type'] ?? 'Bilinmeyen';
-                                                        $pcNumber = preg_match('/PC\d+/', $labName, $matches) ? $matches[0] : 'PC?';
-                                                        echo "<option value=\"{$lab['computer_id']}\" data-rows=\"{$rows}\" data-cols=\"4\" data-total=\"{$lab['pc_count']}\" data-fullname=\"" . htmlspecialchars($labName) . "\">";
-                                                        echo htmlspecialchars($userType) . " - {$lab['pc_count']} PC ({$rows}x4)";
-                                                        echo "</option>";
-                                                    }
-                                                }
-                                            } catch (Exception $e) {
-                                                echo '<option value="lab1" data-rows="14" data-cols="4" data-total="54" data-fullname="Bil_Mekanik-PC50">PC50 - 54 PC (14x4)</option>';
-                                                echo '<option value="lab2" data-rows="12" data-cols="4" data-total="48" data-fullname="Bil_ögr-PC48">PC48 - 48 PC (12x4)</option>';
-                                                echo '<option value="lab3" data-rows="14" data-cols="4" data-total="56" data-fullname="Bil_admin-PC56">PC56 - 56 PC (14x4)</option>';
-                                            }
-                                            ?>
-                                        </select>
-                                        <!-- PC Düzenleme Butonu -->
-                                        <button class="btn btn-outline-primary btn-sm" id="pcEditButton" onclick="editPCCount()" style="display: none;" title="PC Sayısını Düzenle">
-                                            <i class="fas fa-edit me-1"></i>PC Düzenle
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+            <div class="row align-items-center">
+                <!-- Logo and Title -->
+                <div class="col-md-4">
+                    <div class="logo-section d-flex align-items-center">
+                        <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" class="header-logo" style="width: 40px; height: 40px; margin-right: 15px;">
+                        <div class="logo-text">
+                            <div class="brand-name" style="color: white; font-size: 28px; font-weight: 700; margin: 0;">MyOPC</div>
+                            <div class="brand-subtitle" style="color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 400; margin: 0;">Öğrenci Yönetimi</div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Alt Bölüm: İstatistikler ve Filtreler -->
-                <div class="row">
-                    <!-- İstatistik Kartları -->
-                    <div class="col-lg-8 col-md-12 mb-4">
-                        <div class="stats-container">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <div class="stat-card total-card">
-                                        <div class="stat-icon">
-                                            <i class="fas fa-desktop"></i>
-                                        </div>
-                                        <div class="stat-info">
-                                            <h3 class="stat-number" id="totalPcs">0</h3>
-                                            <p class="stat-label">Toplam PC</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="stat-card assigned-card clickable-stat" onclick="filterByStatus('assigned')" data-status="assigned">
-                                        <div class="stat-icon">
-                                            <i class="fas fa-user-check"></i>
-                                        </div>
-                                        <div class="stat-info">
-                                            <h3 class="stat-number" id="assignedPcs">0</h3>
-                                            <p class="stat-label">Atanmış</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="stat-card available-card clickable-stat" onclick="filterByStatus('available')" data-status="available">
-                                        <div class="stat-icon">
-                                            <i class="fas fa-user-times"></i>
-                                        </div>
-                                        <div class="stat-info">
-                                            <h3 class="stat-number" id="availablePcs">0</h3>
-                                            <p class="stat-label">Boş</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                <!-- Stats Section -->
+                <div class="col-md-4">
+                    <div class="header-stats d-flex justify-content-between">
+                        <div class="header-stat-item" style="color: white; text-align: center; margin: 0 20px;">
+                            <i class="fas fa-users" style="font-size: 20px; display: block; margin-bottom: 5px;"></i>
+                            <span class="stat-number" style="font-size: 24px; font-weight: 700; display: block;"><?php echo $studentCount; ?></span>
+                            <span class="stat-label" style="font-size: 12px; opacity: 0.9;">Öğrenci</span>
+                        </div>
+                        <div class="header-stat-item" style="color: white; text-align: center; margin: 0 20px;">
+                            <i class="fas fa-building" style="font-size: 20px; display: block; margin-bottom: 5px;"></i>
+                            <span class="stat-number" style="font-size: 24px; font-weight: 700; display: block;"><?php echo $labCount; ?></span>
+                            <span class="stat-label" style="font-size: 12px; opacity: 0.9;">Laboratuvar</span>
+                        </div>
+                        <div class="header-stat-item" style="color: white; text-align: center; margin: 0 20px;">
+                            <i class="fas fa-tasks" style="font-size: 20px; display: block; margin-bottom: 5px;"></i>
+                            <span class="stat-number" style="font-size: 24px; font-weight: 700; display: block;"><?php echo $assignmentCount; ?></span>
+                            <span class="stat-label" style="font-size: 12px; opacity: 0.9;">Atama</span>
                         </div>
                     </div>
-                    
-                    <!-- Filtreler -->
-                    <div class="col-lg-4 col-md-12 mb-4">
-                        <div class="filters-card">
-                            
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="col-md-4">
+                    <div class="header-actions d-flex justify-content-end align-items-center">
+                        <button class="header-btn action-button excel-import-btn" onclick="openExcelImport()" style="color: white; text-decoration: none; margin-right: 15px; padding: 8px 16px; border-radius: 6px; background: rgba(255,255,255,0.1); transition: all 0.3s ease; border: none;">
+                            <i class="fas fa-file-excel" style="margin-right: 8px;"></i>
+                            Excel'den İçe Aktar
+                        </button>
+                        <a href="../logout.php" class="header-btn" style="color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; background: rgba(255,255,255,0.1); transition: all 0.3s ease;">
+                            <i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i>
+                            Çıkış Yap
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <!-- Welcome Message -->
+           
+
+            <!-- Action Buttons Row -->
+            <div class="action-buttons-row mb-4">
+                <div class="container">
+                    <div class="action-buttons-container">
+                        <a href="student_management.php" class="action-button students-btn">
+                            <i class="fas fa-users"></i>
+                            Öğrenciler
+                        </a>
+                        <a href="lab_list.php" class="action-button labs-btn">
+                            <i class="fas fa-building"></i>
+                            Laboratuvarlar
+                        </a>
+                        <a href="add_lab.php" class="action-button new-lab-btn">
+                            <i class="fas fa-plus"></i>
+                            Yeni Laboratuvar Ekle
+                        </a>
+                        <button class="action-button assignments-btn" id="exportAssignmentsBtn" onclick="exportAssignments()" disabled>
+                            <i class="fas fa-download"></i>
+                            Atamaları Dışa Aktar
+                        </button>
+                        <button class="action-button test-btn" onclick="openTestPage()" id="testButton">
+                            <i class="fas fa-bug"></i>
+                            Atama Testi
+                        </button>
+                     </div>
+                </div>
+            </div>
+
+            <!-- Lab PC Viewer Section -->
+            <div class="lab-pc-viewer-section">
+                <div class="container-fluid">
+                    <div class="lab-selector-card">
+                        <div class="lab-selector-header">
+                            <h3><i class="fas fa-desktop"></i> Laboratuvar PC Durumu</h3>
+                            <p>Bir laboratuvar seçerek PC'lerin durumunu görüntüleyin</p>
+                        </div>
                         
-                            <div class="year-filters">
-                                <h6 class="filter-section-title">Yıl Seçimi</h6>
-                                <div class="year-buttons">
-                                    <button class="year-btn active" onclick="filterByYear('')" data-year="">
-                                        <i class="fas fa-globe"></i>
-                                        <span>Tümü</span>
-                                    </button>
+                        <div class="lab-selector-controls">
+                            <div class="lab-select-wrapper">
+                                <select id="labSelector" class="lab-select">
+                                    <option value="">Laboratuvar Seçin</option>
                                     <?php
                                     try {
-                                        $db = Database::getInstance();
-                                        $studentModel = new Student($db);
-                                        $years = $studentModel->getAvailableYears();
-                                        
-                                        foreach ($years as $yearData) {
-                                            $year = $yearData['year'];
-                                            echo "<button class=\"year-btn\" onclick=\"filterByYear('{$year}')\" data-year=\"{$year}\">";
-                                            echo "<i class=\"fas fa-calendar\"></i>";
-                                            echo "<span>{$year}</span>";
-                                            echo "</button>";
+                                        $labModel = new Lab($db);
+                                        $labs = $labModel->getAll();
+                                        foreach ($labs as $lab) {
+                                            echo '<option value="' . $lab['computer_id'] . '" data-pc-count="' . $lab['pc_count'] . '">' . htmlspecialchars($lab['lab_name']) . ' (' . $lab['pc_count'] . ' PC)</option>';
                                         }
                                     } catch (Exception $e) {
-                                        $defaultYears = [2024, 2023, 2022, 2021];
-                                        foreach ($defaultYears as $year) {
-                                            echo "<button class=\"year-btn\" onclick=\"filterByYear('{$year}')\" data-year=\"{$year}\">";
-                                            echo "<i class=\"fas fa-calendar\"></i>";
-                                            echo "<span>{$year}</span>";
-                                            echo "</button>";
-                                        }
+                                        echo '<option value="">Laboratuvar listesi alınamadı</option>';
                                     }
                                     ?>
-                                </div>
+                                </select>
+                                <i class="fas fa-chevron-down select-arrow"></i>
+                            </div>
+                            <button id="refreshPCs" class="refresh-btn" title="PC Durumlarını Yenile">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button id="editPCCount" class="edit-pc-btn" title="PC Sayısını Düzenle" style="display: none;">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button id="editMaxStudents" class="edit-max-students-btn" title="Maksimum Öğrenci Sayısını Düzenle" style="display: none;">
+                                <i class="fas fa-users"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PC Cards Container -->
+                    <div id="pcCardsContainer" class="pc-cards-container" style="display: none;">
+                        <div class="pc-cards-header">
+                            <h4 id="pcCardsLabName">Laboratuvar PC'leri</h4>
+                            <div class="pc-stats">
+                                <span class="stat-item available">
+                                    <i class="fas fa-circle"></i>
+                                    <span>Boş</span>
+                                    <span class="stat-count" id="availablePCs">0</span>
+                                </span>
+                                <span class="stat-item occupied">
+                                    <i class="fas fa-circle"></i>
+                                    <span>Dolu</span>
+                                    <span class="stat-count" id="occupiedPCs">0</span>
+                                </span>
                             </div>
                         </div>
+                        <div id="pcCardsGrid" class="pc-cards-grid">
+                            <!-- PC kartları buraya dinamik olarak yüklenecek -->
+                        </div>
+                    </div>
+
+                    <!-- Loading indicator -->
+                    <div id="pcLoadingIndicator" class="loading-indicator" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <p>PC durumları yükleniyor...</p>
                     </div>
                 </div>
             </div>
-        </div>
-            
-            <div class="pc-grid" id="pcGrid">
-                <!-- 54 adet bilgisayar kartı buraya gelecek -->
-                <!-- 4 sütun x 14 satır = 54 adet -->
-            </div>
-            </div>
-        </div>
 
-    <!-- Assignment Modal -->
-    <div class="modal fade" id="assignmentModal" tabindex="-1" aria-labelledby="assignmentModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        </div>
+    </div>
+
+    <!-- PC Sayısı Düzenleme Modal -->
+    <div class="modal fade" id="editPCCountModal" tabindex="-1" aria-labelledby="editPCCountModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="assignmentModalLabel">
-                        <i class="fas fa-tasks me-2"></i>Bilgisayar Atama Sistemi Detayları
+                    <h5 class="modal-title" id="editPCCountModalLabel">
+                        <i class="fas fa-desktop me-2"></i>PC Sayısını Düzenle
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="info-section">
-                                <h6 class="info-title">
-                                    <i class="fas fa-info-circle me-2"></i>Sistem Bilgileri
-                                </h6>
-                                <ul class="info-list">
-                                    <li><strong>Toplam Bilgisayar:</strong> 54 adet</li>
-                                    <li><strong>Grid Yapısı:</strong> 4 sütun x 14 satır</li>
-                                    <li><strong>Atama Durumu:</strong> <span id="modalAssignedCount">0</span> atanmış, <span id="modalAvailableCount">54</span> boş</li>
-                                    <li><strong>Son Güncelleme:</strong> <span id="lastUpdate">-</span></li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="info-section">
-                                <h6 class="info-title">
-                                    <i class="fas fa-cogs me-2"></i>Hızlı İşlemler
-                                </h6>
-                                <div class="quick-actions">
-                                    <button class="btn btn-outline-primary btn-sm mb-2" onclick="selectRandomPC()">
-                                        <i class="fas fa-random me-1"></i>Rastgele PC Seç
-                                    </button>
-                                    <button class="btn btn-outline-success btn-sm mb-2" onclick="showAvailablePCs()">
-                                        <i class="fas fa-list me-1"></i>Boş PC'leri Göster
-                                    </button>
-                                    <button class="btn btn-outline-warning btn-sm mb-2" onclick="showAssignedPCs()">
-                                        <i class="fas fa-user-check me-1"></i>Atanmış PC'leri Göster
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong id="currentLabName">Laboratuvar</strong> için PC sayısını değiştiriyorsunuz.
                     </div>
                     
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <div class="info-section">
-                                <h6 class="info-title">
-                                    <i class="fas fa-chart-pie me-2"></i>Atama İstatistikleri
-                                </h6>
-                                <div class="stats-grid">
-                                    <div class="stat-card">
-                                        <div class="stat-icon bg-primary">
-                                            <i class="fas fa-desktop"></i>
-                                        </div>
-                                        <div class="stat-info">
-                                            <div class="stat-number" id="modalTotalPcs">54</div>
-                                            <div class="stat-label">Toplam PC</div>
-                                        </div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <div class="stat-icon bg-success">
-                                            <i class="fas fa-user-check"></i>
-                                        </div>
-                                        <div class="stat-info">
-                                            <div class="stat-number" id="modalAssignedPcs">0</div>
-                                            <div class="stat-label">Atanmış</div>
-                                        </div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <div class="stat-icon bg-warning">
-                                            <i class="fas fa-user-times"></i>
-                                        </div>
-                                        <div class="stat-info">
-                                            <div class="stat-number" id="modalAvailablePcs">54</div>
-                                            <div class="stat-label">Boş</div>
-                                        </div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <div class="stat-icon bg-info">
-                                            <i class="fas fa-percentage"></i>
-                                        </div>
-                                        <div class="stat-info">
-                                            <div class="stat-number" id="modalUsagePercent">0%</div>
-                                            <div class="stat-label">Kullanım Oranı</div>
-                            </div>
-                        </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-                    <button type="button" class="btn btn-primary" onclick="refreshAssignments()">
-                        <i class="fas fa-sync-alt me-1"></i>Yenile
-                    </button>
-                </div>
-            </div>
-    </div>
-</div>
-
-<!-- Toast Bildirim Sistemi -->
-<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
-    <div id="systemToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header">
-            <i class="fas fa-info-circle text-primary me-2"></i>
-            <strong class="me-auto">Sistem Bildirimi</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-        <div class="toast-body" id="toastMessage">
-            <!-- Bildirim mesajı buraya gelecek -->
-        </div>
-    </div>
-</div>
-
-<!-- Assignment Form Modal -->
-    <div class="modal fade" id="assignmentFormModal" tabindex="-1" aria-labelledby="assignmentFormModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="assignmentFormModalLabel">
-                        <i class="fas fa-tasks me-2"></i>Bilgisayar Atama Sistemi
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="assignment-form-container">
-                        <div class="assignment-header">
-                            <h4 class="assignment-title">
-                                <i class="fas fa-tasks me-2"></i>Bilgisayar Atama Sistemi
-                            </h4>
-                            <p class="assignment-subtitle">Öğrencileri bilgisayarlara atayın - Detaylar için başlığa tıklayın</p>
-                        </div>
-                        
-                        <div class="assignment-controls">
-                            <div class="row g-4">
-                                <div class="col-lg-3 col-md-6">
-                                    <div class="form-group">
-                                        <label for="labSelectModal" class="form-label">
-                                            <i class="fas fa-building me-1"></i>Laboratuvar Seçin
-                                        </label>
-                                        <select class="form-select form-select-lg" id="labSelectModal" onchange="changeLabModal()">
-                                            <option value="">Laboratuvar seçin...</option>
-                                            <?php
-                                            // Modal için de aynı laboratuvar listesini kullan
-                                            if (isset($labController)) {
-                                                $labsResult = $labController->getAllLabs();
-                                                if ($labsResult['type'] === 'success') {
-                                                    foreach ($labsResult['data'] as $lab) {
-                                                        $rows = ceil($lab['pc_count'] / 4);
-                                                        $userType = $lab['user_type'] ?? 'Bilinmeyen';
-                                                        echo "<option value=\"{$lab['computer_id']}\" data-rows=\"{$rows}\" data-cols=\"4\" data-total=\"{$lab['pc_count']}\">";
-                                                        echo htmlspecialchars($userType) . " - {$lab['pc_count']} PC ({$rows}x4)";
-                                                        echo "</option>";
-                                                    }
-                                                }
-                                            }
-                                            ?>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-lg-3 col-md-6">
-                                    <div class="form-group">
-                                        <label for="studentSelectModal" class="form-label">
-                                            <i class="fas fa-user me-1"></i>Öğrenci Seçin
-                                        </label>
-                                        <select class="form-select form-select-lg" id="studentSelectModal">
-                                            <option value="">Öğrenci seçin...</option>
-                                            <!-- Öğrenci listesi buraya gelecek -->
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-lg-3 col-md-6">
-                                    <div class="form-group">
-                                        <label for="pcSelectModal" class="form-label">
-                                            <i class="fas fa-desktop me-1"></i>Bilgisayar Seçin
-                                        </label>
-                                        <select class="form-select form-select-lg" id="pcSelectModal">
-                                            <option value="">Bilgisayar seçin...</option>
-                                            <!-- Bilgisayar listesi buraya gelecek -->
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-lg-3 col-md-6">
-                                    <div class="form-group">
-                                        <label class="form-label">&nbsp;</label>
-                                        <div class="d-grid">
-                                            <button class="btn btn-primary btn-lg" id="assignBtnModal">
-                                                <i class="fas fa-link me-2"></i>Atama Yap
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- PC Sayısını Düzenleme Modal -->
-    <div class="modal fade" id="editPCCountModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-edit me-2"></i>PC Sayısını Düzenle
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
                     <div class="mb-3">
-                        <label for="newPCCount" class="form-label">Yeni PC Sayısı</label>
-                        <input type="number" class="form-control" id="newPCCount" min="0" max="1000" value="0">
-                        <div class="form-text">Mevcut PC sayısı: <span id="currentPCCountEdit">0</span></div>
+                        <label for="newPCCount" class="form-label">PC Sayısı:</label>
+                        <input type="number" class="form-control" id="newPCCount" min="1" max="100" placeholder="PC sayısını girin">
+                        <div class="form-text">PC sayısı 1 ile 100 arasında olmalıdır.</div>
+                    </div>
+                    
+                    <div class="alert alert-warning" style="display: none;" id="pcCountWarning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="warningText"></span>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                    <button type="button" class="btn btn-info" onclick="confirmEditPCCount()">
-                        <i class="fas fa-save me-1"></i>Kaydet
+                    <button type="button" class="btn btn-primary" id="savePCCount">
+                        <i class="fas fa-save me-2"></i>Kaydet
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Maksimum Öğrenci Sayısı Düzenleme Modal -->
+    <div class="modal fade" id="editMaxStudentsModal" tabindex="-1" aria-labelledby="editMaxStudentsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editMaxStudentsModalLabel">
+                        <i class="fas fa-users me-2"></i>Maksimum Öğrenci Sayısını Düzenle
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong id="currentLabNameMaxStudents">Laboratuvar</strong> için PC başına maksimum öğrenci sayısını değiştiriyorsunuz.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="newMaxStudentsPerPC" class="form-label">PC Başına Maksimum Öğrenci Sayısı:</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="newMaxStudentsPerPC" min="1" max="20" value="4" placeholder="Maksimum öğrenci sayısı">
+                            <span class="input-group-text">öğrenci</span>
+                        </div>
+                        <div class="form-text">Her PC'ye atanabilecek maksimum öğrenci sayısı (1-20 arası).</div>
+                    </div>
+                    
+                    <div class="alert alert-warning" style="display: none;" id="maxStudentsWarning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="maxStudentsWarningText"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="saveMaxStudents">
+                        <i class="fas fa-save me-2"></i>Kaydet
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excel Import Modal -->
+    <div class="modal fade" id="excelImportModal" tabindex="-1" aria-labelledby="excelImportModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="excelImportModalLabel">
+                        <i class="fas fa-file-excel me-2"></i>Excel'den Öğrenci Verilerini İçe Aktar
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Excel Import Form -->
+                    <form id="excelImportForm" enctype="multipart/form-data">
+                        <!-- Template Download Section -->
+                        <div class="mb-3 text-center">
+                            <a href="../excel-to-mysql/template.xlsx" class="btn btn-outline-info" download>
+                                <i class="fas fa-file-excel me-2"></i>Şablon Excel Dosyasını İndir
+                            </a>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="excel_file" class="form-label fw-bold">
+                                <i class="fas fa-upload me-2"></i>Excel Dosyası Seçin:
+                            </label>
+                            <input type="file" class="form-control form-control-lg" id="excel_file" name="excel_file" 
+                                   accept=".xlsx,.xls" required>
+                            <div class="form-text">Sadece .xlsx ve .xls dosyaları kabul edilir.</div>
+                        </div>
+                        
+                        <!-- Import Button -->
+                        <div class="d-grid mb-3">
+                            <button type="submit" form="excelImportForm" class="btn btn-success btn-lg" id="importButton">
+                                <i class="fas fa-upload me-2"></i>Verileri İçe Aktar
+                            </button>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div id="importProgress" class="mb-3" style="display: none;">
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     role="progressbar" style="width: 100%"></div>
+                            </div>
+                            <small class="text-muted">Veriler işleniyor...</small>
+                        </div>
+                        
+                        <!-- Result Area -->
+                        <div id="importResult" class="mt-3"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Kapat
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Atama Sistemi Modal -->
+    <div class="modal fade" id="assignmentModal" tabindex="-1" aria-labelledby="assignmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="assignmentModalTitle">
+                        <i class="fas fa-user-plus me-2"></i>
+                        Öğrenci Ekle
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Seçim Bilgileri -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-icon">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                                <div class="info-content">
+                                    <h6>Laboratuvar</h6>
+                                    <p id="selectedLabName" class="mb-0">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-icon">
+                                    <i class="fas fa-desktop"></i>
+                                </div>
+                                <div class="info-content">
+                                    <h6>PC Numarası</h6>
+                                    <p id="selectedPCNumber" class="mb-0">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Öğrenci Seçimi -->
+                    <div class="student-selection-section">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">
+                                <i class="fas fa-user-graduate me-2"></i>
+                                Öğrenci Seçin
+                            </h5>
+                            <div class="selected-count-display">
+                                <span class="badge bg-primary fs-6" id="selectedStudentCount">0</span>
+                                <small class="text-muted ms-2">öğrenci seçildi</small>
+                                <span class="badge bg-warning ms-2" id="maxStudentsLimit" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    Maksimum <span id="maxStudentsCount">4</span> öğrenci
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Öğrenci Sınırı Uyarısı -->
+                        <div class="alert alert-warning" id="studentLimitWarning" style="display: none;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Dikkat:</strong> Bu PC'ye maksimum <span id="warningMaxStudents">4</span> öğrenci atanabilir. 
+                            Şu anda <span id="currentStudentCount">0</span> öğrenci atanmış durumda.
+                        </div>
+                        
+                        <!-- Loading Indicator -->
+                        <div id="studentLoadingIndicator" class="text-center py-4" style="display: none;">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Yükleniyor...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Öğrenci verileri yükleniyor...</p>
+                        </div>
+                        
+                        <!-- Öğrenci Listesi -->
+                        <div id="studentListContainer" class="student-list-simple">
+                            <!-- Öğrenci listesi buraya yüklenecek -->
+                        </div>
+                    </div>
+
+                    <!-- Gizli Input'lar -->
+                    <input type="hidden" id="selectedPCId" value="">
+                    <input type="hidden" id="selectedComputerId" value="">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>İptal
+                    </button>
+                    <button type="button" class="btn btn-primary" id="confirmAssignment">
+                        <i class="fas fa-check me-2"></i>Öğrencileri Ekle
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Toast Notification -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+        <div id="systemToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <i class="fas fa-info-circle text-primary me-2"></i>
+                <strong class="me-auto">Sistem Bildirimi</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toastMessage">
+                <!-- Bildirim mesajı buraya gelecek -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Modal -->
+    <div class="modal fade" id="testModal" tabindex="-1" aria-labelledby="testModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="testModalLabel">
+                        <i class="fas fa-bug me-2"></i>
+                        Atama Sistemi Test Sayfası
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="padding: 0;">
+                    <div id="testContent" style="height: 600px; overflow-y: auto;">
+                        <!-- Test içeriği buraya yüklenecek -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Kapat
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="refreshTest()">
+                        <i class="fas fa-sync-alt me-2"></i>Yenile
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PC Detayları Modal -->
+    <div class="modal fade" id="pcDetailsModal" tabindex="-1" aria-labelledby="pcDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="pcDetailsModalLabel">
+                        <i class="fas fa-desktop me-2"></i>
+                        <span id="pcDetailsTitle">PC Detayları</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- PC Bilgileri -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary">
+                                        <i class="fas fa-info-circle me-2"></i>PC Bilgileri
+                                    </h6>
+                                    <div class="mb-2">
+                                        <strong>PC Numarası:</strong> <span id="pcDetailsNumber" class="text-primary">-</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Durum:</strong> <span id="pcDetailsStatus" class="badge">-</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Laboratuvar:</strong> <span id="pcDetailsLab">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title text-success">
+                                        <i class="fas fa-users me-2"></i>Atanmış Öğrenciler
+                                    </h6>
+                                    <div class="mb-2">
+                                        <strong>Toplam Öğrenci:</strong> <span id="pcDetailsStudentCount" class="badge bg-success">0</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Son Atama:</strong> <span id="pcDetailsLastAssignment">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Atanmış Öğrenciler Listesi -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user-graduate me-2"></i>Atanmış Öğrenciler
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="pcStudentsList">
+                                <!-- Öğrenciler buraya yüklenecek -->
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>Yükleniyor...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Kapat
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="refreshPCDetails()">
+                        <i class="fas fa-sync-alt me-2"></i>Yenile
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../assets/js/dashboard.js"></script>
+    <script src="js/dasboard.js?v=<?php echo time(); ?>"></script>
+    <script src="js/pc-update.js?v=<?php echo time(); ?>"></script>
+    <script src="js/export-assignments.js?v=<?php echo time(); ?>"></script>
+    <script>
+        // Test sayfasını aç
+        function openTestPage() {
+            console.log('🧪 Test sayfası açılıyor...');
+            try {
+                loadTestContent();
+                const modal = new bootstrap.Modal(document.getElementById('testModal'));
+                modal.show();
+                console.log('✅ Test modal başarıyla açıldı');
+            } catch (error) {
+                console.error('❌ Test modal açılırken hata:', error);
+                alert('Test modal açılırken hata oluştu: ' + error.message);
+            }
+        }
+        
+        // Test içeriğini yükle
+        function loadTestContent() {
+            const testContent = document.getElementById('testContent');
+            testContent.innerHTML = `
+                <div style="padding: 20px; font-family: Arial, sans-serif;">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; margin: -20px -20px 20px -20px;">
+                        <h2><i class="fas fa-bug me-2"></i>Atama Sistemi Test Sayfası</h2>
+                        <p>Atama sisteminin çalışıp çalışmadığını test edin</p>
+                    </div>
+                    
+                    <!-- Test 1: PC Kartları Oluşturma -->
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                        <h4><i class="fas fa-desktop me-2"></i>Test 1: PC Kartları Oluşturma</h4>
+                        <p>PC kartlarının doğru şekilde oluşturulup oluşturulmadığını test eder.</p>
+                        <button class="btn btn-success" onclick="testPCCards()">
+                            <i class="fas fa-desktop me-2"></i>PC Kartlarını Test Et
+                        </button>
+                        <div id="test1-result" style="margin-top: 10px;"></div>
+                        <div id="pc-cards-container" style="margin-top: 15px;"></div>
+                    </div>
+
+                    <!-- Test 2: PC ID Kontrolü -->
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                        <h4><i class="fas fa-key me-2"></i>Test 2: PC ID Kontrolü</h4>
+                        <p>PC ID'lerinin doğru şekilde set edilip edilmediğini test eder.</p>
+                        <button class="btn btn-success" onclick="testPCIds()">
+                            <i class="fas fa-key me-2"></i>PC ID'lerini Test Et
+                        </button>
+                        <div id="test2-result" style="margin-top: 10px;"></div>
+                    </div>
+
+                    <!-- Test 3: Modal Açma -->
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                        <h4><i class="fas fa-window-maximize me-2"></i>Test 3: Modal Açma</h4>
+                        <p>Atama modal'ının doğru şekilde açılıp açılmadığını test eder.</p>
+                        <button class="btn btn-success" onclick="testModal()">
+                            <i class="fas fa-window-maximize me-2"></i>Modal'ı Test Et
+                        </button>
+                        <div id="test3-result" style="margin-top: 10px;"></div>
+                    </div>
+
+                    <!-- Test 4: Atama İşlemi -->
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                        <h4><i class="fas fa-user-plus me-2"></i>Test 4: Atama İşlemi</h4>
+                        <p>Atama işleminin doğru şekilde çalışıp çalışmadığını test eder.</p>
+                        <button class="btn btn-success" onclick="testAssignment()">
+                            <i class="fas fa-user-plus me-2"></i>Atama İşlemini Test Et
+                        </button>
+                        <div id="test4-result" style="margin-top: 10px;"></div>
+                    </div>
+
+                    <!-- Test Sonuçları -->
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px;">
+                        <h4><i class="fas fa-chart-bar me-2"></i>Test Sonuçları</h4>
+                        <div id="overall-result"></div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Test sayfasını yenile
+        function refreshTest() {
+            loadTestContent();
+        }
+        
+        // Test verileri
+        let testResults = {
+            test1: false,
+            test2: false,
+            test3: false,
+            test4: false
+        };
+
+        const testPCs = [
+            { pc_id: 1, pc_number: 1, student_count: 0, students: [] },
+            { pc_id: 2, pc_number: 2, student_count: 1, students: [{ full_name: 'Test Öğrenci', sdt_nmbr: '12345' }] },
+            { pc_id: 3, pc_number: 3, student_count: 0, students: [] },
+            { pc_id: 4, pc_number: 4, student_count: 0, students: [] }
+        ];
+
+        function showResult(elementId, message, type = 'success') {
+            const element = document.getElementById(elementId);
+            const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'exclamation-triangle';
+            const bgClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-warning';
+            
+            element.innerHTML = `
+                <div class="alert ${bgClass}">
+                    <i class="fas fa-${icon} me-2"></i>
+                    ${message}
+                </div>
+            `;
+        }
+
+        function testPCCards() {
+            console.log('🧪 Test 1: PC Kartları Oluşturma başlatılıyor...');
+            try {
+                const container = document.getElementById('pc-cards-container');
+                container.innerHTML = '';
+                
+                testPCs.forEach(pc => {
+                    const isOccupied = pc.student_count > 0;
+                    const statusClass = isOccupied ? 'border-danger' : 'border-success';
+                    const statusText = isOccupied ? 'Dolu' : 'Boş';
+                    const statusIcon = isOccupied ? 'fas fa-user' : 'fas fa-desktop';
+                    
+                    const pcDisplayNumber = `PC${pc.pc_number.toString().padStart(2, '0')}`;
+                    const pcId = pc.pc_id || pc.pc_number;
+                    
+                    const cardHTML = `
+                        <div class="card ${statusClass} mb-2" style="width: 200px; display: inline-block; margin: 10px;">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">${pcDisplayNumber}</h5>
+                                <p class="card-text">
+                                    <i class="${statusIcon}"></i> ${statusText}
+                                </p>
+                                <button class="btn btn-primary btn-sm" onclick="testAssignStudent(${pcId}, ${pc.pc_number})">
+                                    <i class="fas fa-user-plus"></i> Ata
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += cardHTML;
+                });
+                
+                testResults.test1 = true;
+                showResult('test1-result', `PC kartları başarıyla oluşturuldu! (${testPCs.length} kart)`, 'success');
+                updateOverallResult();
+                
+            } catch (error) {
+                testResults.test1 = false;
+                showResult('test1-result', `Hata: ${error.message}`, 'error');
+                updateOverallResult();
+            }
+        }
+
+        function testPCIds() {
+            console.log('🧪 Test 2: PC ID Kontrolü başlatılıyor...');
+            
+            try {
+                const pcCards = document.querySelectorAll('#pc-cards-container .card');
+                let allValid = true;
+                let errorMessage = '';
+                
+                pcCards.forEach((card, index) => {
+                    const pcId = card.querySelector('button')?.getAttribute('onclick')?.match(/testAssignStudent\(([^,]+),/)?.[1];
+                    
+                    if (!pcId || pcId === 'undefined' || pcId === 'null') {
+                        allValid = false;
+                        errorMessage += `Kart ${index + 1}: PC ID geçersiz (${pcId})<br>`;
+                    }
+                });
+                
+                if (allValid) {
+                    testResults.test2 = true;
+                    showResult('test2-result', `Tüm PC ID'leri geçerli! (${pcCards.length} kart kontrol edildi)`, 'success');
+                } else {
+                    testResults.test2 = false;
+                    showResult('test2-result', `Hata: ${errorMessage}`, 'error');
+                }
+                
+                updateOverallResult();
+                
+            } catch (error) {
+                testResults.test2 = false;
+                showResult('test2-result', `Hata: ${error.message}`, 'error');
+                updateOverallResult();
+            }
+        }
+
+        function testModal() {
+            console.log('🧪 Test 3: Modal Açma başlatılıyor...');
+            
+            try {
+                // Test modal'ı oluştur
+                const testModal = document.createElement('div');
+                testModal.className = 'modal fade';
+                testModal.innerHTML = `
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Test Modal</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Test modal'ı başarıyla açıldı!</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(testModal);
+                const modal = new bootstrap.Modal(testModal);
+                modal.show();
+                
+                testModal.addEventListener('hidden.bs.modal', function() {
+                    document.body.removeChild(testModal);
+                });
+                
+                testResults.test3 = true;
+                showResult('test3-result', 'Modal başarıyla açıldı!', 'success');
+                updateOverallResult();
+                
+            } catch (error) {
+                testResults.test3 = false;
+                showResult('test3-result', `Hata: ${error.message}`, 'error');
+                updateOverallResult();
+            }
+        }
+
+        function testAssignStudent(pcId, pcNumber) {
+            console.log('🧪 Test Assign Student:', pcId, pcNumber);
+            alert(`Test Atama: PC ID: ${pcId}, PC No: ${pcNumber}`);
+        }
+
+        function testAssignment() {
+            console.log('🧪 Test 4: Atama İşlemi başlatılıyor...');
+            
+            try {
+                const testData = {
+                    pcId: 1,
+                    pcNumber: 1,
+                    labId: 1,
+                    studentIds: [1, 2, 3]
+                };
+                
+                console.log('Test atama verileri:', testData);
+                
+                if (testData.pcId && testData.pcNumber && testData.labId && testData.studentIds.length > 0) {
+                    testResults.test4 = true;
+                    showResult('test4-result', `Atama işlemi test verileri geçerli! (${testData.studentIds.length} öğrenci)`, 'success');
+                } else {
+                    testResults.test4 = false;
+                    showResult('test4-result', 'Atama test verileri geçersiz!', 'error');
+                }
+                
+                updateOverallResult();
+                
+            } catch (error) {
+                testResults.test4 = false;
+                showResult('test4-result', `Hata: ${error.message}`, 'error');
+                updateOverallResult();
+            }
+        }
+
+        function updateOverallResult() {
+            const totalTests = Object.keys(testResults).length;
+            const passedTests = Object.values(testResults).filter(result => result === true).length;
+            const failedTests = totalTests - passedTests;
+            
+            let resultHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Geçen Testler: ${passedTests}/${totalTests}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert ${failedTests > 0 ? 'alert-danger' : 'alert-success'}">
+                            <i class="fas fa-${failedTests > 0 ? 'times-circle' : 'check-circle'} me-2"></i>
+                            Başarısız Testler: ${failedTests}/${totalTests}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (passedTests === totalTests) {
+                resultHTML += `
+                    <div class="alert alert-success mt-3">
+                        <i class="fas fa-trophy me-2"></i>
+                        <strong>Tüm testler başarılı! Atama sistemi çalışıyor.</strong>
+                    </div>
+                `;
+            } else {
+                resultHTML += `
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Bazı testler başarısız. Lütfen hataları kontrol edin.</strong>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('overall-result').innerHTML = resultHTML;
+        }
+
+        // Sayfa yüklendiğinde test butonunu kontrol et
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Dashboard yüklendi, test butonu kontrol ediliyor...');
+            
+            const testButton = document.getElementById('testButton');
+            if (testButton) {
+                console.log('✅ Test butonu bulundu');
+                testButton.addEventListener('click', function(e) {
+                    console.log('🖱️ Test butonuna tıklandı');
+                });
+            } else {
+                console.error('❌ Test butonu bulunamadı!');
+            }
+            
+            const testModal = document.getElementById('testModal');
+            if (testModal) {
+                console.log('✅ Test modal bulundu');
+            } else {
+                console.error('❌ Test modal bulunamadı!');
+            }
+        });
+    </script>
 </body>
 </html>

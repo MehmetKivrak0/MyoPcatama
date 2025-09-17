@@ -1,0 +1,809 @@
+<?php
+session_start();
+
+// Giriş kontrolü
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    header('Location: iambatman.php');
+    exit;
+}
+
+// Türkçe karakter yardımcısını dahil et
+require_once '../utils/TurkishCharacterHelper.php';
+
+$username = $_SESSION['full_name'] ?? 'Kullanıcı';
+
+// Gerekli modelleri import et
+require_once '../config/db.php';
+require_once '../models/Student.php';
+
+$db = Database::getInstance();
+$studentModel = new Student($db);
+
+// AJAX istekleri
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Error handling için output buffering başlat
+    ob_start();
+    
+    try {
+        header('Content-Type: application/json');
+        
+        $action = $_POST['action'] ?? '';
+    
+    switch ($action) {
+        case 'get_student':
+            $id = $_POST['id'] ?? 0;
+            $student = $studentModel->getStudentById($id);
+            if ($student) {
+                echo json_encode(['success' => true, 'student' => $student]);
+            } else {
+                echo json_encode(['success' => false, 'error' => 'Öğrenci bulunamadı']);
+            }
+            exit;
+            
+        case 'add':
+            $studentData = [
+                'sdt_nmbr' => trim($_POST['sdt_nmbr'] ?? ''),
+                'full_name' => trim($_POST['full_name'] ?? ''),
+                'academic_year' => intval($_POST['academic_year'] ?? date('Y'))
+            ];
+            
+            // Validasyon
+            $errors = [];
+            if (empty($studentData['sdt_nmbr'])) $errors[] = 'Öğrenci numarası gereklidir!';
+            if (empty($studentData['full_name'])) $errors[] = 'Öğrenci adı gereklidir!';
+            if ($studentData['academic_year'] < 2000 || $studentData['academic_year'] > 2030) $errors[] = 'Geçerli bir akademik yıl seçiniz!';
+            if ($studentModel->studentNumberExists($studentData['sdt_nmbr'])) $errors[] = 'Bu öğrenci numarası zaten kullanılıyor!';
+            
+            if (empty($errors)) {
+                $result = $studentModel->addStudent($studentData);
+                echo json_encode($result);
+            } else {
+                echo json_encode(['success' => false, 'error' => implode(' ', $errors)]);
+            }
+            exit;
+            
+        case 'update':
+            $id = $_POST['student_id'] ?? 0;
+            $studentData = [
+                'sdt_nmbr' => trim($_POST['sdt_nmbr'] ?? ''),
+                'full_name' => trim($_POST['full_name'] ?? ''),
+                'academic_year' => intval($_POST['academic_year'] ?? date('Y'))
+            ];
+            
+            // Validasyon
+            $errors = [];
+            if (empty($studentData['sdt_nmbr'])) $errors[] = 'Öğrenci numarası gereklidir!';
+            if (empty($studentData['full_name'])) $errors[] = 'Öğrenci adı gereklidir!';
+            if ($studentData['academic_year'] < 2000 || $studentData['academic_year'] > 2030) $errors[] = 'Geçerli bir akademik yıl seçiniz!';
+            if ($studentModel->studentNumberExists($studentData['sdt_nmbr'], $id)) $errors[] = 'Bu öğrenci numarası zaten kullanılıyor!';
+            
+            if (empty($errors)) {
+                $result = $studentModel->updateStudent($id, $studentData);
+                echo json_encode($result);
+            } else {
+                echo json_encode(['success' => false, 'error' => implode(' ', $errors)]);
+            }
+            exit;
+            
+        case 'delete_student':
+            $id = $_POST['id'] ?? 0;
+            $result = $studentModel->deleteStudent($id);
+            echo json_encode($result);
+            exit;
+            
+    }
+    
+    } catch (Exception $e) {
+        // Hata durumunda buffer'ı temizle ve JSON error döndür
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false, 
+            'error' => 'Sunucu hatası: ' . $e->getMessage(),
+            'debug' => [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]
+        ]);
+        exit;
+    } finally {
+        // Buffer'ı temizle
+        if (ob_get_level()) {
+            ob_end_flush();
+        }
+    }
+}
+
+// Sayfalama parametreleri
+$page = $_GET['page'] ?? 1;
+$limit = 20; // Sayfa başına öğrenci sayısı
+$offset = ($page - 1) * $limit;
+
+// Filtreleme parametreleri
+$year_filter = $_GET['year'] ?? '';
+$search = $_GET['search'] ?? '';
+
+// Öğrenci listesini getir (sayfalama ile)
+$students = $studentModel->getStudentsPaginated($offset, $limit, $year_filter, $search);
+$total_students = $studentModel->getTotalStudents($year_filter, $search);
+$total_pages = ceil($total_students / $limit);
+
+$years = $studentModel->getAvailableYears();
+?>
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Öğrenci Yönetimi - MyoPc</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Mevcut CSS Files -->
+    <link href="../assets/css/navbar.css" rel="stylesheet">
+    <link href="css/student_cards.css" rel="stylesheet">
+    <style>
+        /* Diğer Bileşenler */
+        .stats-card {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #4a90a4 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(30, 58, 95, 0.3);
+        }
+        
+        .filter-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        /* Dashboard ile tutarlı navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #4a90a4 100%) !important;
+            box-shadow: 0 4px 20px rgba(30, 58, 95, 0.3);
+        }
+        
+        body {
+            padding-top: 80px;
+            background: #f8f9fa;
+        }
+        
+        .main-content {
+            margin-top: 20px;
+            min-height: calc(100vh - 100px);
+        }
+        
+        /* Modal yatay scroll düzeltmesi */
+        .modal-dialog {
+            max-width: 90vw;
+            margin: 1.75rem auto;
+        }
+        
+        .modal-content {
+            overflow-x: hidden;
+        }
+        
+        .modal-body {
+            overflow-x: hidden;
+            padding: 1.5rem;
+        }
+        
+        /* Form elemanları için responsive düzenleme */
+        @media (max-width: 768px) {
+            .modal-dialog {
+                max-width: 95vw;
+                margin: 0.5rem auto;
+            }
+            
+            .modal-body {
+                padding: 1rem;
+            }
+            
+            .modal-body .row.g-3 {
+                margin: 0;
+            }
+            
+            .modal-body .col-12 {
+                padding-left: 0;
+                padding-right: 0;
+                margin-bottom: 1rem;
+            }
+            
+            .modal-body .form-control,
+            .modal-body .form-select {
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .modal-body .form-label {
+                font-size: 0.9rem;
+                margin-bottom: 0.25rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .modal-dialog {
+                max-width: 98vw;
+                margin: 0.25rem auto;
+            }
+            
+            .modal-body {
+                padding: 0.75rem;
+            }
+            
+            .modal-header {
+                padding: 0.75rem 1rem;
+            }
+            
+            .modal-footer {
+                padding: 0.75rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 100%); border-bottom: 1px solid #e5e7eb;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="dashboard.php">
+                <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" class="img-fluid" style="width: 35px; height: auto;">
+                <div class="brand-text">
+                    <div class="text-blue">MyoPC</div>
+                    <div class="text-white"> Öğrenci Yönetimi</div>
+                </div>
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="dashboard.php">
+                    <i class="fas fa-arrow-left me-1"></i>Dashboard'a Dön
+                </a>
+                <a class="nav-link" href="../logout.php">
+                    <i class="fas fa-sign-out-alt me-1"></i>Çıkış Yap
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="container-fluid px-4">
+            <!-- İstatistikler -->
+            <div class="stats-card">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h2 class="mb-0"><?php echo number_format($total_students); ?></h2>
+                            <p class="mb-0">Toplam Öğrenci</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h2 class="mb-0"><?php echo count($years); ?></h2>
+                            <p class="mb-0">Aktif Yıl</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h2 class="mb-0"><?php echo $year_filter ? number_format($total_students) : number_format($studentModel->getTotalStudents(date('Y'))); ?></h2>
+                            <p class="mb-0"><?php echo $year_filter ? 'Filtrelenmiş' : 'Bu Yıl'; ?></p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="d-flex gap-2 justify-content-center">
+                                <button class="btn btn-outline-light" onclick="openAddStudentModal()">
+                                    <i class="fas fa-plus me-1"></i>Yeni Öğrenci
+                                </button>
+                                <a href="bulk_operations.php" class="btn btn-outline-light">
+                                    <i class="fas fa-tasks me-1"></i>Toplu İşlemler
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtreler -->
+            <div class="filter-section">
+                <form method="GET" id="filterForm">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">Yıl Filtresi</label>
+                            <select class="form-select" name="year" id="yearFilter" onchange="submitFilter()">
+                                <option value="">Tüm Yıllar</option>
+                                <?php foreach ($years as $year): ?>
+                                    <option value="<?php echo $year['year']; ?>" <?php echo $year_filter == $year['year'] ? 'selected' : ''; ?>><?php echo $year['year']; ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Arama</label>
+                            <input type="text" class="form-control" name="search" id="searchInput" placeholder="Öğrenci adı veya numarası..." value="<?php echo htmlspecialchars($search); ?>" onkeyup="debounceSearch()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search me-1"></i>Filtrele
+                                </button>
+                                <a href="student_management.php" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i>Temizle
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Öğrenci Listesi -->
+            <div class="students-grid" id="studentsList">
+                <?php foreach ($students as $student): ?>
+                <div class="student-card" data-year="<?php echo $student['academic_year']; ?>" data-name="<?php echo strtolower($student['full_name']); ?>" data-number="<?php echo $student['sdt_nmbr']; ?>">
+                    <!-- Kart Başlığı -->
+                    <div class="student-header">
+                        <h5 class="student-name"><?php echo htmlspecialchars($student['full_name']); ?></h5>
+                        <div class="student-actions">
+                            <button class="btn btn-outline-primary" onclick="editStudent(<?php echo $student['student_id']; ?>)" title="Düzenle">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteStudent(<?php echo $student['student_id']; ?>)" title="Sil">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Kart İçeriği -->
+                    <div class="student-info">
+                        
+                        <div class="student-detail-item">
+                            <i class="fas fa-id-card"></i>
+                            <span class="student-detail-label">Numara:</span>
+                            <span class="student-detail-value"><?php echo htmlspecialchars($student['sdt_nmbr']); ?></span>
+                        </div>
+                        <div class="student-detail-item">
+                            <i class="fas fa-clock"></i>
+                            <span class="student-detail-labels">Eklenme:</span>
+                            <span class="student-detail-values"><?php echo date('d.m.Y', strtotime($student['created_at'])); ?></span>
+                        </div>
+                        <div class="student-detail-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span class="student-detail-label">Yıl:</span>
+                            <span class="student-detail-value"><?php echo $student['academic_year']; ?></span>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <!-- Sayfalama -->
+            <?php if ($total_pages > 1): ?>
+            <div class="pagination-section mt-4">
+                <nav aria-label="Öğrenci sayfalama">
+                    <ul class="pagination justify-content-center">
+                        <!-- Önceki sayfa -->
+                        <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="?page=<?php echo $page - 1; ?>&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>">
+                                <i class="fas fa-chevron-left"></i> Önceki
+                            </a>
+                        </li>
+                        
+                        <!-- Sayfa numaraları -->
+                        <?php
+                        $start_page = max(1, $page - 2);
+                        $end_page = min($total_pages, $page + 2);
+                        
+                        if ($start_page > 1): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>">1</a>
+                            </li>
+                            <?php if ($start_page > 2): ?>
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        
+                        <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
+                            <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                                <a class="page-link" href="?page=<?php echo $i; ?>&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
+                            </li>
+                        <?php endfor; ?>
+                        
+                        <?php if ($end_page < $total_pages): ?>
+                            <?php if ($end_page < $total_pages - 1): ?>
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            <?php endif; ?>
+                            <li class="page-item">
+                                <a class="page-link" href="?page=<?php echo $total_pages; ?>&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>"><?php echo $total_pages; ?></a>
+                            </li>
+                        <?php endif; ?>
+                        
+                        <!-- Sonraki sayfa -->
+                        <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="?page=<?php echo $page + 1; ?>&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>">
+                                Sonraki <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                
+                <!-- Sayfa bilgisi -->
+                <div class="text-center mt-3">
+                    <p class="text-muted">
+                        Sayfa <?php echo $page; ?> / <?php echo $total_pages; ?> 
+                        (Toplam <?php echo number_format($total_students); ?> öğrenci)
+                    </p>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Öğrenci Ekleme/Düzenleme Modal -->
+    <div class="modal fade" id="studentModal" tabindex="-1" aria-labelledby="studentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="studentModalLabel">
+                        <i class="fas fa-user-plus me-2"></i>
+                        <span id="modalTitle">Yeni Öğrenci Ekle</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Hata Mesajları -->
+                    <div id="errorAlert" class="alert alert-danger d-none" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="errorMessage"></span>
+                    </div>
+                    
+                    <!-- Başarı Mesajları -->
+                    <div id="successAlert" class="alert alert-success d-none" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <span id="successMessage"></span>
+                    </div>
+                    
+                    <!-- Form -->
+                    <form id="studentForm">
+                        <input type="hidden" id="studentId" name="student_id">
+                        <input type="hidden" id="action" name="action" value="add">
+                        
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="modalSdtNmbr" class="form-label">
+                                    Öğrenci Numarası <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="modalSdtNmbr" 
+                                       name="sdt_nmbr" 
+                                       placeholder="Örn: 2024001"
+                                       required>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="modalAcademicYear" class="form-label">
+                                    Akademik Yıl <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="modalAcademicYear" name="academic_year" required>
+                                    <option value="">Yıl Seçiniz</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="modalFullName" class="form-label">
+                                Öğrenci Adı Soyadı <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="modalFullName" 
+                                   name="full_name" 
+                                   placeholder="Örn: Ahmet Yılmaz"
+                                   required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>İptal
+                    </button>
+                    <button type="button" class="btn btn-primary" id="saveStudentBtn">
+                        <i class="fas fa-save me-1"></i>
+                        <span id="saveButtonText">Ekle</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        console.log('Student management page loaded');
+        let isEditMode = false;
+        
+        // Kart sayısına göre grid düzenini ayarla
+        function adjustGridLayout() {
+            const studentsGrid = document.getElementById('studentsList');
+            if (!studentsGrid) return;
+            
+            const studentCards = studentsGrid.querySelectorAll('.student-card');
+            const cardCount = studentCards.length;
+            
+            console.log('Kart sayısı:', cardCount);
+            
+            // Mevcut sınıfları temizle
+            studentsGrid.classList.remove('single-card', 'two-cards', 'three-cards', 'four-cards');
+            
+            // Kart sayısına göre sınıf ekle
+            if (cardCount === 1) {
+                studentsGrid.classList.add('single-card');
+                console.log('Tek kart düzeni uygulandı');
+            } else if (cardCount === 2) {
+                studentsGrid.classList.add('two-cards');
+                console.log('İki kart düzeni uygulandı');
+            } else if (cardCount === 3) {
+                studentsGrid.classList.add('three-cards');
+                console.log('Üç kart düzeni uygulandı');
+            } else if (cardCount >= 4) {
+                studentsGrid.classList.add('four-cards');
+                console.log('Dört kart düzeni uygulandı');
+            }
+        }
+        
+        // Sayfa yüklendiğinde grid düzenini ayarla
+        document.addEventListener('DOMContentLoaded', function() {
+            adjustGridLayout();
+            loadYears();
+            setupModalEventListeners();
+        });
+        
+        function loadYears() {
+            // Yılları modal dropdown'a yükle
+            const yearSelect = document.getElementById('modalAcademicYear');
+            const currentYear = new Date().getFullYear();
+            
+            // Mevcut yılları temizle (ilk option hariç)
+            yearSelect.innerHTML = '<option value="">Yıl Seçiniz</option>';
+            
+            // Son 5 yıl ve gelecek 2 yıl ekle
+            for (let year = currentYear + 2; year >= currentYear - 5; year--) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            }
+        }
+        
+        function setupModalEventListeners() {
+            // Modal kaydet butonu
+            document.getElementById('saveStudentBtn').addEventListener('click', function() {
+                saveStudent();
+            });
+            
+            // Form validasyonu
+            document.getElementById('studentForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveStudent();
+            });
+            
+            // Ad soyad otomatik büyük harf
+            document.getElementById('modalFullName').addEventListener('input', function(e) {
+                e.target.value = e.target.value.toUpperCase();
+            });
+        }
+        
+        function saveStudent() {
+            const formData = new FormData(document.getElementById('studentForm'));
+            const action = formData.get('action');
+            
+            // Validasyon
+            const sdt_nmbr = formData.get('sdt_nmbr').trim();
+            const full_name = formData.get('full_name').trim();
+            const academic_year = formData.get('academic_year');
+            
+            if (!sdt_nmbr || !full_name || !academic_year) {
+                showError('Lütfen tüm alanları doldurunuz!');
+                return;
+            }
+            
+            if (!/^\d+$/.test(sdt_nmbr)) {
+                showError('Öğrenci numarası sadece rakam içermelidir!');
+                return;
+            }
+            
+            if (full_name.length < 2) {
+                showError('Ad soyad en az 2 karakter olmalıdır!');
+                return;
+            }
+            
+            // AJAX isteği
+            fetch('student_management.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess(action === 'add' ? 'Öğrenci başarıyla eklendi!' : 'Öğrenci başarıyla güncellendi!');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showError(data.error || 'İşlem başarısız!');
+                }
+            })
+            .catch(error => {
+                console.error('Save error:', error);
+                showError('Bağlantı hatası: ' + error.message);
+            });
+        }
+        
+        // Sayfa tamamen yüklendiğinde tekrar kontrol et
+        window.addEventListener('load', function() {
+            setTimeout(adjustGridLayout, 100);
+        });
+        
+        // Resize olayında da kontrol et
+        window.addEventListener('resize', function() {
+            setTimeout(adjustGridLayout, 100);
+        });
+        
+        // Test function
+        function testFunction() {
+            console.log('Test function called!');
+            alert('Test function works!');
+        }
+        
+        
+        
+        
+        function editStudent(id) {
+            console.log('Edit student called with ID:', id);
+            // Öğrenci verilerini getir ve modalı aç
+            fetchStudentData(id);
+        }
+        
+        function openAddStudentModal() {
+            console.log('Opening add student modal');
+            resetModal();
+            document.getElementById('modalTitle').textContent = 'Yeni Öğrenci Ekle';
+            document.getElementById('saveButtonText').textContent = 'Ekle';
+            document.getElementById('action').value = 'add';
+            document.getElementById('studentId').value = '';
+            
+            // Modalı aç
+            const modal = new bootstrap.Modal(document.getElementById('studentModal'));
+            modal.show();
+        }
+        
+        function fetchStudentData(id) {
+            console.log('Fetching student data for ID:', id);
+            
+            const formData = new FormData();
+            formData.append('action', 'get_student');
+            formData.append('id', id);
+            
+            fetch('student_management.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    populateModal(data.student);
+                    document.getElementById('modalTitle').textContent = 'Öğrenci Düzenle';
+                    document.getElementById('saveButtonText').textContent = 'Güncelle';
+                    document.getElementById('action').value = 'update';
+                    document.getElementById('studentId').value = id;
+                    
+                    // Modalı aç
+                    const modal = new bootstrap.Modal(document.getElementById('studentModal'));
+                    modal.show();
+                } else {
+                    showError('Öğrenci verileri alınamadı: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching student data:', error);
+                showError('Bağlantı hatası: ' + error.message);
+            });
+        }
+        
+        function populateModal(student) {
+            document.getElementById('modalSdtNmbr').value = student.sdt_nmbr || '';
+            document.getElementById('modalFullName').value = student.full_name || '';
+            document.getElementById('modalAcademicYear').value = student.academic_year || '';
+        }
+        
+        function resetModal() {
+            document.getElementById('studentForm').reset();
+            document.getElementById('errorAlert').classList.add('d-none');
+            document.getElementById('successAlert').classList.add('d-none');
+        }
+        
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorAlert').classList.remove('d-none');
+            document.getElementById('successAlert').classList.add('d-none');
+        }
+        
+        function showSuccess(message) {
+            document.getElementById('successMessage').textContent = message;
+            document.getElementById('successAlert').classList.remove('d-none');
+            document.getElementById('errorAlert').classList.add('d-none');
+        }
+        
+        function deleteStudent(id) {
+            console.log('Delete student called with ID:', id);
+            if (confirm('Bu öğrenciyi silmek istediğinizden emin misiniz?')) {
+                const formData = new FormData();
+                formData.append('action', 'delete_student');
+                formData.append('id', id);
+                
+                fetch('student_management.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                    }
+                    return response.text();
+                })
+                .then(text => {
+                    console.log('Raw delete response:', text);
+                    try {
+                        const data = JSON.parse(text);
+                        console.log('Delete response:', data);
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            console.error('Delete error:', data.error);
+                            if (data.debug) {
+                                console.error('Debug info:', data.debug);
+                            }
+                            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+                        }
+                    } catch (parseError) {
+                        console.error('JSON parse error:', parseError);
+                        console.error('Response text:', text);
+                        alert('Sunucu yanıtı geçersiz: ' + parseError.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Delete fetch error:', error);
+                    alert('Bağlantı hatası: ' + error.message);
+                });
+            }
+        }
+        
+        let searchTimeout;
+        
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                submitFilter();
+            }, 500);
+        }
+        
+        function submitFilter() {
+            document.getElementById('filterForm').submit();
+        }
+        
+        function filterStudents() {
+            // Bu fonksiyon artık kullanılmıyor, server-side filtreleme kullanılıyor
+            submitFilter();
+        }
+        
+    </script>
+</body>
+</html>

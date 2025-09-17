@@ -243,14 +243,17 @@ class LabController {
                 ];
             }
             
+            // Veritabanındaki gerçek verileri kullan (hesaplama yapmadan)
             $pcCount = $this->labModel->getComputerCount($labId);
-            $availablePcCount = $this->labModel->getAvailableComputerCount($labId);
+            $assignedPcCount = 0; // Veritabanında assigned_pc_count kolonu yoksa
+            $availablePcCount = $pcCount; // Toplam = Müsait (şimdilik)
             
             return [
                 'type' => 'success',
                 'data' => [
                     'lab' => $lab,
                     'pc_count' => $pcCount,
+                    'assigned_pc_count' => $assignedPcCount,
                     'available_pc_count' => $availablePcCount
                 ]
             ];
@@ -261,6 +264,93 @@ class LabController {
                 'message' => 'Hata: ' . $e->getMessage()
             ];
         }
+    }
+    
+    /**
+     * Kullanıcı tipine göre laboratuvarları getir
+     * Get labs by user type
+     */
+    public function getLabsByUserType($userType) {
+        try {
+            $labs = $this->labModel->getByUserType($userType);
+            
+            // Her laboratuvar için PC sayısını ekle
+            foreach ($labs as &$lab) {
+                $lab['available_pc_count'] = $lab['pc_count'];
+            }
+            
+            return [
+                'type' => 'success',
+                'data' => $labs
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'type' => 'error',
+                'message' => 'Hata: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Mevcut kullanıcı tiplerini getir
+     * Get available user types
+     */
+    public function getUserTypes() {
+        try {
+            $userTypes = $this->labModel->getUserTypes();
+            return [
+                'type' => 'success',
+                'data' => $userTypes
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'type' => 'error',
+                'message' => 'Hata: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Toplam laboratuvar sayısını getir
+     * Get total lab count
+     */
+    public function getLabCount() {
+        try {
+            $count = $this->labModel->getLabCount();
+            return [
+                'success' => true,
+                'count' => $count
+            ];
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Hata: ' . $e->getMessage()
+            ];
+        }
+    }
+}
+
+// Controller'ı başlat (doğrudan çağrıldığında)
+if (basename($_SERVER['PHP_SELF']) === 'LabController.php') {
+    $controller = new LabController();
+    
+    $action = $_GET['action'] ?? $_POST['action'] ?? '';
+    
+    switch ($action) {
+        case 'get_lab_count':
+            $result = $controller->getLabCount();
+            header('Content-Type: application/json');
+            echo json_encode($result);
+            break;
+        default:
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Geçersiz action: ' . $action
+            ]);
+            break;
     }
 }
 ?>

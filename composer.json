@@ -1,0 +1,35 @@
+{
+    "name": "myopc/student-management-system",
+    "description": "MyOPC Öğrenci Yönetim Sistemi - Excel Import özellikli",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^7.4 || ^8.0",
+        "phpoffice/phpspreadsheet": "^1.30",
+        "ezyang/htmlpurifier": "^4.15",
+        "maennchen/zipstream-php": "^3.0",
+        "markbaker/complex": "^3.0",
+        "markbaker/matrix": "^3.0",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.0",
+        "psr/simple-cache": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "MyOPC\\": "src/"
+        },
+        "files": [
+            "config/db.php",
+            "utils/TurkishCharacterHelper.php"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "echo 'MyOPC Excel Import sistemi hazır!'"
+        ]
+    }
+}

@@ -24,7 +24,7 @@ class Pc {
      * Create new PC
      */
     public function create($name, $lab_id, $status = 'available', $assigned_student_id = null) {
-        $sql = "INSERT INTO myopc_computers (name, lab_id, status, assigned_student_id, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())";
+        $sql = "INSERT INTO myopc_computers (name, lab_id, status, assigned_student_id, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW() + INTERVAL 1 MINUTE)";
         $result = $this->db->execute($sql, [$name, $lab_id, $status, $assigned_student_id]);
         
         if ($result > 0) {
@@ -66,8 +66,9 @@ class Pc {
      * Get all PCs in lab
      */
     public function getByLabId($lab_id) {
-        $sql = "SELECT * FROM myopc_computers WHERE lab_id = ? ORDER BY name ASC";
-        return $this->db->fetchAll($sql, [$lab_id]);
+        // Bu metod artık Assignment modelindeki getPCAssignmentsByLab ile aynı işi yapıyor
+        // Assignment modelini kullanmak daha mantıklı
+        return [];
     }
     
     /**

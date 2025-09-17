@@ -100,8 +100,14 @@ class Lab {
      * Get all labs
      */
     public function getAll() {
-        $sql = "SELECT * FROM myopc_lab_computers ORDER BY lab_name ASC";
-        return $this->db->fetchAll($sql);
+        // Tüm laboratuvarları getir - user_type'a göre sırala
+        $sql = "SELECT computer_id, lab_name, pc_count, user_type, created_at, updated_at, created_by 
+                FROM myopc_lab_computers 
+                ORDER BY user_type ASC, created_at DESC";
+        error_log("Lab::getAll() - SQL: " . $sql);
+        $result = $this->db->fetchAll($sql);
+        error_log("Lab::getAll() - Result count: " . count($result));
+        return $result;
     }
     
     /**
@@ -137,11 +143,44 @@ class Lab {
     /**
      * Laboratuvardaki müsait bilgisayar sayısını getir
      * Get available computer count in lab
+     * NOT: Bu method artık optimize edildi - sadece assigned count'tan hesaplanıyor
      */
     public function getAvailableComputerCount($lab_id) {
-        // Bu tablo yapısında müsait PC sayısı ayrı tutulmuyor
-        // Şimdilik toplam PC sayısını döndürüyoruz
-        return $this->getComputerCount($lab_id);
+        try {
+            $totalPcs = $this->getComputerCount($lab_id);
+            $assignedPcs = $this->getAssignedComputerCount($lab_id);
+            return $totalPcs - $assignedPcs;
+        } catch (Exception $e) {
+            error_log("Müsait PC sayısı hesaplanırken hata: " . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    /**
+     * Laboratuvardaki atanmış bilgisayar sayısını getir
+     * Get assigned computer count in lab
+     */
+    public function getAssignedComputerCount($lab_id) {
+        try {
+            // Toplam PC sayısını al
+            $totalPcs = $this->getComputerCount($lab_id);
+            
+            // Atanmış PC sayısını hesapla
+            $assignedPcs = 0;
+            for ($i = 1; $i <= $totalPcs; $i++) {
+                $pcId = $lab_id * 100 + $i;
+                $sql = "SELECT COUNT(*) as count FROM myopc_assignments WHERE computer_id = ?";
+                $result = $this->db->fetchOne($sql, [$pcId]);
+                if ($result && $result['count'] > 0) {
+                    $assignedPcs++;
+                }
+            }
+            
+            return $assignedPcs;
+        } catch (Exception $e) {
+            error_log("Atanmış PC sayısı hesaplanırken hata: " . $e->getMessage());
+            return 0;
+        }
     }
     
     /**
@@ -184,13 +223,152 @@ class Lab {
             return ['success' => false, 'message' => 'PC sayısı negatif olamaz.'];
         }
         
-        $sql = "UPDATE myopc_lab_computers SET pc_count = ? WHERE computer_id = ?";
-        $result = $this->db->execute($sql, [$new_count, $lab_id]);
+        try {
+            // Mevcut PC sayısını al
+            $currentLab = $this->getById($lab_id);
+            if (!$currentLab) {
+                return ['success' => false, 'message' => 'Laboratuvar bulunamadı.'];
+            }
+            
+            $old_count = $currentLab['pc_count'];
+            
+            // Eğer yeni sayı eski sayıdan küçükse, fazla PC'lerde öğrenci ataması var mı kontrol et
+            if ($new_count < $old_count) {
+                $occupiedPCs = $this->checkOccupiedPCs($lab_id, $new_count, $old_count);
+                if (!empty($occupiedPCs)) {
+                    $pcNumbers = 'PC' . implode(', PC', $occupiedPCs);
+                    $pcCount = count($occupiedPCs);
+                    $pcText = $pcCount == 1 ? 'PC' : 'PC\'ler';
+                    return [
+                        'success' => false, 
+                        'message' => "PC sayısını azaltamazsınız! Aşağıdaki {$pcText}de öğrenci ataması bulunuyor: {$pcNumbers}. Lütfen önce bu PC'lerdeki öğrenci atamalarını kaldırın.",
+                        'occupied_pcs' => $occupiedPCs
+                    ];
+                }
+            }
+            
+            // Transaction başlat
+            $this->db->beginTransaction();
+            
+            // Eğer yeni sayı eski sayıdan küçükse, fazla PC'lerdeki atamaları temizle
+            if ($new_count < $old_count) {
+                $this->clearExcessPCAssignments($lab_id, $new_count, $old_count);
+            }
+            
+            // PC sayısını güncelle
+            $sql = "UPDATE myopc_lab_computers SET pc_count = ?, updated_at = NOW() WHERE computer_id = ?";
+            $result = $this->db->execute($sql, [$new_count, $lab_id]);
+            
+            if ($result <= 0) {
+                throw new Exception('PC sayısı güncellenirken bir hata oluştu.');
+            }
+            
+            // Transaction'ı commit et
+            $this->db->commit();
+            
+            return ['success' => true, 'message' => "PC sayısı {$old_count}'dan {$new_count}'a güncellendi. Lab yapısı yenilendi."];
+            
+        } catch (Exception $e) {
+            // Hata durumunda rollback yap
+            $this->db->rollback();
+            error_log("PC sayısı güncelleme hatası: " . $e->getMessage());
+            return ['success' => false, 'message' => 'PC sayısı güncellenirken bir hata oluştu: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Fazla PC'lerde öğrenci ataması olup olmadığını kontrol et
+     * Check if there are student assignments in excess PCs
+     */
+    private function checkOccupiedPCs($lab_id, $new_count, $old_count) {
+        $occupiedPCs = [];
         
-        if ($result > 0) {
-            return ['success' => true, 'message' => "PC sayısı {$new_count} olarak güncellendi."];
-        } else {
-            return ['success' => false, 'message' => 'PC sayısı güncellenirken bir hata oluştu.'];
+        // Yeni sayıdan fazla olan PC'lerde öğrenci ataması var mı kontrol et
+        for ($i = $new_count + 1; $i <= $old_count; $i++) {
+            $pcId = $lab_id * 100 + $i;
+            $sql = "SELECT COUNT(*) as count FROM myopc_assignments WHERE computer_id = ?";
+            $result = $this->db->fetchOne($sql, [$pcId]);
+            
+            if ($result && $result['count'] > 0) {
+                $occupiedPCs[] = $i;
+            }
+        }
+        
+        return $occupiedPCs;
+    }
+    
+    /**
+     * Fazla PC'lerdeki atamaları temizle
+     * Clear assignments from excess PCs
+     */
+    private function clearExcessPCAssignments($lab_id, $new_count, $old_count) {
+        // Yeni sayıdan fazla olan PC'lerdeki atamaları temizle
+        for ($i = $new_count + 1; $i <= $old_count; $i++) {
+            $pcId = $lab_id * 100 + $i;
+            $sql = "DELETE FROM myopc_assignments WHERE computer_id = ?";
+            $this->db->execute($sql, [$pcId]);
+        }
+    }
+    
+    /**
+     * Belirli kullanıcı tipine göre laboratuvarları getir
+     * Get labs by user type
+     */
+    public function getByUserType($userType) {
+        $sql = "SELECT computer_id, lab_name, pc_count, user_type, created_at, updated_at, created_by 
+                FROM myopc_lab_computers 
+                WHERE user_type = ? 
+                ORDER BY created_at DESC";
+        return $this->db->fetchAll($sql, [$userType]);
+    }
+    
+    /**
+     * Mevcut kullanıcı tiplerini getir
+     * Get available user types
+     */
+    public function getUserTypes() {
+        $sql = "SELECT DISTINCT user_type FROM myopc_lab_computers ORDER BY user_type ASC";
+        $result = $this->db->fetchAll($sql);
+        return array_column($result, 'user_type');
+    }
+    
+    /**
+     * Toplam laboratuvar sayısını getir
+     * Get total lab count
+     */
+    public function getLabCount() {
+        try {
+            $sql = "SELECT COUNT(*) as count FROM myopc_lab_computers";
+            $result = $this->db->fetchOne($sql);
+            return $result ? $result['count'] : 0;
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+    
+    /**
+     * Laboratuvar için maksimum öğrenci sayısını getir
+     */
+    public function getMaxStudentsPerPC($labId) {
+        try {
+            $sql = "SELECT max_students_per_pc FROM myopc_lab_computers WHERE id = ?";
+            $result = $this->db->fetchOne($sql, [$labId]);
+            return $result ? (int)$result['max_students_per_pc'] : 4; // Varsayılan 4
+        } catch (Exception $e) {
+            return 4; // Varsayılan değer
+        }
+    }
+    
+    /**
+     * Laboratuvar için maksimum öğrenci sayısını güncelle
+     */
+    public function updateMaxStudentsPerPC($labId, $maxStudents) {
+        try {
+            $sql = "UPDATE myopc_lab_computers SET max_students_per_pc = ? WHERE id = ?";
+            $result = $this->db->execute($sql, [$maxStudents, $labId]);
+            return $result;
+        } catch (Exception $e) {
+            return false;
         }
     }
 }

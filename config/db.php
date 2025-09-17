@@ -153,6 +153,10 @@ class Database {
         return $this->connection->rollback();
     }
     
+    public function prepare($sql) {
+        return $this->connection->prepare($sql);
+    }
+    
     public function close() {
         if ($this->connection) {
             $this->connection->close();
