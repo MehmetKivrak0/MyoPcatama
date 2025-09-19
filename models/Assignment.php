@@ -797,7 +797,7 @@ class Assignment {
                 $pcNumber = $i;
                 
                 // Bu PC'ye atanmış öğrencileri getir
-                $sql = "SELECT s.full_name, s.academic_year, s.sdt_nmbr
+                $sql = "SELECT s.full_name, s.academic_year, s.sdt_nmbr, s.student_id
                         FROM myopc_assignments a
                         JOIN myopc_students s ON a.student_id = s.student_id
                         WHERE a.computer_id = ?";

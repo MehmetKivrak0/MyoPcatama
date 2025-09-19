@@ -264,7 +264,6 @@
 .student-info.align-right .student-detail-item {
     justify-content: flex-end;
 }
-
 /* Responsive Tasarım */
 @media (max-width: 1400px) {
     .student-card {
@@ -440,4 +439,5 @@
         font-size: 0.75rem;
     }
 }
+
 

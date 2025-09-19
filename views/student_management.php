@@ -198,6 +198,267 @@ $years = $studentModel->getAvailableYears();
             padding: 1.5rem;
         }
         
+        /* ========================================
+           MOBILE RESPONSIVE IMPROVEMENTS
+           ======================================== */
+        
+        /* Navbar Mobile Improvements */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0.5rem 0;
+            }
+            
+            .navbar-brand {
+                font-size: 0.9rem;
+            }
+            
+            .navbar-brand img {
+                width: 30px !important;
+                height: 30px !important;
+            }
+            
+            .navbar-toggler {
+                border: none;
+                padding: 0.25rem 0.5rem;
+                font-size: 1rem;
+            }
+            
+            .navbar-toggler:focus {
+                box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+            }
+            
+            .navbar-collapse {
+                background: rgba(30, 58, 95, 0.95);
+                margin-top: 0.5rem;
+                border-radius: 0.5rem;
+                padding: 1rem;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            }
+            
+            .navbar-nav {
+                text-align: center;
+            }
+            
+            .navbar-nav .nav-link {
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+                border-radius: 0.25rem;
+                margin: 0.25rem 0;
+                transition: all 0.3s ease;
+            }
+            
+            .navbar-nav .nav-link:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+            
+            .navbar-nav .nav-link i {
+                font-size: 0.9rem;
+                margin-right: 0.5rem;
+            }
+            
+            body {
+                padding-top: 70px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .navbar {
+                padding: 0.4rem 0;
+            }
+            
+            .navbar-brand {
+                font-size: 0.8rem;
+            }
+            
+            .navbar-brand img {
+                width: 25px !important;
+                height: 25px !important;
+            }
+            
+            .navbar-toggler {
+                padding: 0.2rem 0.4rem;
+                font-size: 0.9rem;
+            }
+            
+            .navbar-collapse {
+                margin-top: 0.4rem;
+                padding: 0.8rem;
+            }
+            
+            .navbar-nav .nav-link {
+                padding: 0.6rem 0.8rem;
+                font-size: 0.85rem;
+                margin: 0.2rem 0;
+            }
+            
+            .navbar-nav .nav-link i {
+                font-size: 0.8rem;
+                margin-right: 0.4rem;
+            }
+            
+            body {
+                padding-top: 65px;
+            }
+        }
+        
+        /* Stats Card Mobile Improvements */
+        @media (max-width: 768px) {
+            .stats-card {
+                padding: 1rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .stats-card .row {
+                margin: 0;
+            }
+            
+            .stats-card .col-md-3 {
+                margin-bottom: 1rem;
+                padding: 0 0.5rem;
+            }
+            
+            .stats-card .col-md-3:last-child {
+                margin-bottom: 0;
+            }
+            
+            .stats-card h2 {
+                font-size: 1.8rem;
+                margin-bottom: 0.25rem;
+            }
+            
+            .stats-card p {
+                font-size: 0.9rem;
+                margin-bottom: 0;
+            }
+            
+            .stats-card .btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.8rem;
+                margin: 0.25rem;
+            }
+            
+            .stats-card .btn i {
+                font-size: 0.75rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .stats-card {
+                padding: 0.8rem;
+                margin-bottom: 1rem;
+            }
+            
+            .stats-card .col-md-3 {
+                margin-bottom: 0.8rem;
+                padding: 0 0.25rem;
+            }
+            
+            .stats-card h2 {
+                font-size: 1.5rem;
+            }
+            
+            .stats-card p {
+                font-size: 0.8rem;
+            }
+            
+            .stats-card .btn {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.75rem;
+                margin: 0.2rem;
+            }
+            
+            .stats-card .btn i {
+                font-size: 0.7rem;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            .stats-card {
+                padding: 0.6rem;
+            }
+            
+            .stats-card .col-md-3 {
+                margin-bottom: 0.6rem;
+            }
+            
+            .stats-card h2 {
+                font-size: 1.3rem;
+            }
+            
+            .stats-card p {
+                font-size: 0.75rem;
+            }
+            
+            .stats-card .btn {
+                padding: 0.3rem 0.5rem;
+                font-size: 0.7rem;
+                margin: 0.1rem;
+            }
+        }
+        
+        /* Filter Section Mobile Improvements */
+        @media (max-width: 768px) {
+            .filter-section {
+                padding: 1rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .filter-section .row {
+                margin: 0;
+            }
+            
+            .filter-section .col-md-4 {
+                margin-bottom: 1rem;
+                padding: 0 0.5rem;
+            }
+            
+            .filter-section .col-md-4:last-child {
+                margin-bottom: 0;
+            }
+            
+            .filter-section .form-label {
+                font-size: 0.9rem;
+                margin-bottom: 0.25rem;
+            }
+            
+            .filter-section .form-control,
+            .filter-section .form-select {
+                font-size: 0.9rem;
+            }
+            
+            .filter-section .btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.8rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .filter-section {
+                padding: 0.8rem;
+                margin-bottom: 1rem;
+            }
+            
+            .filter-section .col-md-4 {
+                margin-bottom: 0.8rem;
+                padding: 0 0.25rem;
+            }
+            
+            .filter-section .form-label {
+                font-size: 0.8rem;
+            }
+            
+            .filter-section .form-control,
+            .filter-section .form-select {
+                font-size: 0.8rem;
+                padding: 0.5rem 0.75rem;
+            }
+            
+            .filter-section .btn {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.75rem;
+            }
+        }
+        
         /* Form elemanları için responsive düzenleme */
         @media (max-width: 768px) {
             .modal-dialog {
@@ -250,27 +511,122 @@ $years = $studentModel->getAvailableYears();
                 padding: 0.75rem 1rem;
             }
         }
+        
+        /* Main Content Mobile Adjustments */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-top: 15px;
+                padding: 0 0.5rem;
+            }
+            
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .main-content {
+                margin-top: 10px;
+                padding: 0 0.25rem;
+            }
+            
+            .container-fluid {
+                padding-left: 0.25rem;
+                padding-right: 0.25rem;
+            }
+        }
+        
+        /* Pagination Mobile Improvements */
+        @media (max-width: 768px) {
+            .pagination-section {
+                margin-top: 2rem;
+            }
+            
+            .pagination {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .pagination .page-item {
+                margin: 0.1rem;
+            }
+            
+            .pagination .page-link {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.9rem;
+            }
+            
+            .pagination .page-link i {
+                font-size: 0.8rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .pagination-section {
+                margin-top: 1.5rem;
+            }
+            
+            .pagination .page-link {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.8rem;
+            }
+            
+            .pagination .page-link i {
+                font-size: 0.7rem;
+            }
+            
+            .pagination .page-item .page-link span {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            .pagination .page-link {
+                padding: 0.3rem 0.5rem;
+                font-size: 0.75rem;
+            }
+            
+            .pagination .page-item .page-link {
+                min-width: 35px;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 100%); border-bottom: 1px solid #e5e7eb;">
         <div class="container-fluid">
-            <a class="navbar-brand" href="dashboard.php">
-                <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" class="img-fluid" style="width: 35px; height: auto;">
-                <div class="brand-text">
-                    <div class="text-blue">MyoPC</div>
-                    <div class="text-white"> Öğrenci Yönetimi</div>
+            <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
+                <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" class="img-fluid me-2" style="width: 35px; height: auto;">
+                <div class="brand-text d-none d-md-block">
+                    <div class="text-blue fw-bold">MyoPC</div>
+                    <div class="text-white small">Öğrenci Yönetimi</div>
+                </div>
+                <div class="brand-text d-block d-md-none">
+                    <div class="text-blue fw-bold">MyoPC</div>
+                    <div class="text-white small">Öğrenci</div>
                 </div>
             </a>
             
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="dashboard.php">
-                    <i class="fas fa-arrow-left me-1"></i>Dashboard'a Dön
-                </a>
-                <a class="nav-link" href="../logout.php">
-                    <i class="fas fa-sign-out-alt me-1"></i>Çıkış Yap
-                </a>
+            <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link d-flex align-items-center" href="dashboard.php">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        <span class="d-none d-sm-inline">Dashboard'a Dön</span>
+                        <span class="d-inline d-sm-none">Dashboard</span>
+                    </a>
+                    <a class="nav-link d-flex align-items-center" href="../logout.php">
+                        <i class="fas fa-sign-out-alt me-1"></i>
+                        <span class="d-none d-sm-inline">Çıkış Yap</span>
+                        <span class="d-inline d-sm-none">Çıkış</span>
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
@@ -279,33 +635,37 @@ $years = $studentModel->getAvailableYears();
         <div class="container-fluid px-4">
             <!-- İstatistikler -->
             <div class="stats-card">
-                <div class="row">
-                    <div class="col-md-3">
+                <div class="row g-3">
+                    <div class="col-6 col-md-3">
                         <div class="text-center">
                             <h2 class="mb-0"><?php echo number_format($total_students); ?></h2>
                             <p class="mb-0">Toplam Öğrenci</p>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3">
                         <div class="text-center">
                             <h2 class="mb-0"><?php echo count($years); ?></h2>
                             <p class="mb-0">Aktif Yıl</p>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3">
                         <div class="text-center">
                             <h2 class="mb-0"><?php echo $year_filter ? number_format($total_students) : number_format($studentModel->getTotalStudents(date('Y'))); ?></h2>
                             <p class="mb-0"><?php echo $year_filter ? 'Filtrelenmiş' : 'Bu Yıl'; ?></p>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3">
                         <div class="text-center">
-                            <div class="d-flex gap-2 justify-content-center">
-                                <button class="btn btn-outline-light" onclick="openAddStudentModal()">
-                                    <i class="fas fa-plus me-1"></i>Yeni Öğrenci
+                            <div class="d-flex flex-column flex-md-row gap-2 justify-content-center">
+                                <button class="btn btn-outline-light btn-sm" onclick="openAddStudentModal()">
+                                    <i class="fas fa-plus me-1"></i>
+                                    <span class="d-none d-sm-inline">Yeni Öğrenci</span>
+                                    <span class="d-inline d-sm-none">Yeni</span>
                                 </button>
-                                <a href="bulk_operations.php" class="btn btn-outline-light">
-                                    <i class="fas fa-tasks me-1"></i>Toplu İşlemler
+                                <a href="bulk_operations.php" class="btn btn-outline-light btn-sm">
+                                    <i class="fas fa-tasks me-1"></i>
+                                    <span class="d-none d-sm-inline">Toplu İşlemler</span>
+                                    <span class="d-inline d-sm-none">Toplu</span>
                                 </a>
                             </div>
                         </div>
@@ -316,8 +676,8 @@ $years = $studentModel->getAvailableYears();
             <!-- Filtreler -->
             <div class="filter-section">
                 <form method="GET" id="filterForm">
-                    <div class="row">
-                        <div class="col-md-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
                             <label class="form-label">Yıl Filtresi</label>
                             <select class="form-select" name="year" id="yearFilter" onchange="submitFilter()">
                                 <option value="">Tüm Yıllar</option>
@@ -326,18 +686,22 @@ $years = $studentModel->getAvailableYears();
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-12 col-md-4">
                             <label class="form-label">Arama</label>
                             <input type="text" class="form-control" name="search" id="searchInput" placeholder="Öğrenci adı veya numarası..." value="<?php echo htmlspecialchars($search); ?>" onkeyup="debounceSearch()">
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">&nbsp;</label>
-                            <div class="d-flex gap-2">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label d-none d-md-block">&nbsp;</label>
+                            <div class="d-flex flex-column flex-md-row gap-2">
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-search me-1"></i>Filtrele
+                                    <i class="fas fa-search me-1"></i>
+                                    <span class="d-none d-sm-inline">Filtrele</span>
+                                    <span class="d-inline d-sm-none">Ara</span>
                                 </button>
                                 <a href="student_management.php" class="btn btn-outline-secondary">
-                                    <i class="fas fa-times me-1"></i>Temizle
+                                    <i class="fas fa-times me-1"></i>
+                                    <span class="d-none d-sm-inline">Temizle</span>
+                                    <span class="d-inline d-sm-none">Temizle</span>
                                 </a>
                             </div>
                         </div>
@@ -526,6 +890,58 @@ $years = $studentModel->getAvailableYears();
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Bootstrap navbar collapse functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing navbar functionality...');
+            
+            // Navbar toggle functionality
+            const navbarToggler = document.querySelector('.navbar-toggler');
+            const navbarCollapse = document.querySelector('.navbar-collapse');
+            
+            console.log('Navbar toggler found:', !!navbarToggler);
+            console.log('Navbar collapse found:', !!navbarCollapse);
+            
+            if (navbarToggler && navbarCollapse) {
+                // Manual toggle functionality
+                navbarToggler.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Navbar toggler clicked');
+                    
+                    const isExpanded = navbarCollapse.classList.contains('show');
+                    if (isExpanded) {
+                        navbarCollapse.classList.remove('show');
+                        navbarToggler.setAttribute('aria-expanded', 'false');
+                    } else {
+                        navbarCollapse.classList.add('show');
+                        navbarToggler.setAttribute('aria-expanded', 'true');
+                    }
+                });
+                
+                // Close navbar when clicking outside
+                document.addEventListener('click', function(event) {
+                    if (!navbarToggler.contains(event.target) && !navbarCollapse.contains(event.target)) {
+                        navbarCollapse.classList.remove('show');
+                        navbarToggler.setAttribute('aria-expanded', 'false');
+                    }
+                });
+                
+                // Close navbar when clicking on nav links
+                const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+                navLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        navbarCollapse.classList.remove('show');
+                        navbarToggler.setAttribute('aria-expanded', 'false');
+                    });
+                });
+                
+                console.log('Navbar functionality initialized successfully');
+            } else {
+                console.error('Navbar elements not found!');
+            }
+        });
+    </script>
     <script>
         console.log('Student management page loaded');
         let isEditMode = false;

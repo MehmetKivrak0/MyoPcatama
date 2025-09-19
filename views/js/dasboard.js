@@ -98,12 +98,52 @@ const editPCBtn = document.getElementById('editPCCount');
 const availablePCs = document.getElementById('availablePCs');
 const occupiedPCs = document.getElementById('occupiedPCs');
 
+// PC kartlarından öğrenci verilerini al
+function getStudentsFromPCCards() {
+    const students = [];
+    const pcCards = document.querySelectorAll('.pc-card');
+    
+    pcCards.forEach(card => {
+        const pcNumber = card.querySelector('.pc-number')?.textContent?.trim();
+        const studentElements = card.querySelectorAll('.student-item, .student-item-simple');
+        
+        studentElements.forEach(element => {
+            const name = element.querySelector('.student-name, .student-name-simple')?.textContent?.trim();
+            const yearElement = element.querySelector('.student-year, .student-details small, .student-details-simple small');
+            let year = null;
+            
+            if (yearElement) {
+                const yearText = yearElement.textContent.trim();
+                
+                // Academic year formatını ara (2024, 2023, vb.)
+                const yearMatch = yearText.match(/(\d{4})/);
+                if (yearMatch) {
+                    year = parseInt(yearMatch[1]);
+                }
+            }
+            
+            if (name) {
+                students.push({
+                    name: name,
+                    year: year,
+                    pcNumber: pcNumber
+                });
+            }
+        });
+    });
+    
+    return students;
+}
+
 // Lab seçimi değiştiğinde
 labSelector.addEventListener('change', function() {
     const selectedLabId = this.value;
     const selectedLabText = this.options[this.selectedIndex].text;
     
+    console.log('🔍 Laboratuvar seçildi - selectedLabId:', selectedLabId, 'selectedLabText:', selectedLabText);
+    
     if (selectedLabId) {
+        console.log('✅ Laboratuvar ID var, loadPCCards çağrılıyor');
         loadPCCards(selectedLabId, selectedLabText);
         editPCBtn.style.display = 'block'; // PC düzenleme butonunu göster
         editMaxStudentsBtn.style.display = 'block'; // Maksimum öğrenci sayısı butonunu göster
@@ -112,7 +152,20 @@ labSelector.addEventListener('change', function() {
         if (typeof updateExportButtonState === 'function') {
             updateExportButtonState();
         }
+        
+        // Filtreleme sistemini tetikle
+        if (window.studentYearFilter) {
+            // Lab değişikliği eventi gönder
+            const labData = {
+                name: selectedLabText.split(' (')[0],
+                students: getStudentsFromPCCards() // PC kartlarından öğrenci verilerini al
+            };
+            
+            const event = new CustomEvent('labChanged', { detail: labData });
+            document.dispatchEvent(event);
+        }
     } else {
+        console.log('❌ Laboratuvar ID yok, PC kartları gizleniyor');
         pcCardsContainer.style.display = 'none';
         editPCBtn.style.display = 'none'; // PC düzenleme butonunu gizle
         editMaxStudentsBtn.style.display = 'none'; // Maksimum öğrenci sayısı butonunu gizle
@@ -120,6 +173,11 @@ labSelector.addEventListener('change', function() {
         // Dışa aktar butonunu pasif hale getir
         if (typeof updateExportButtonState === 'function') {
             updateExportButtonState();
+        }
+        
+        // Filtreleme panelini gizle
+        if (window.studentYearFilter) {
+            window.studentYearFilter.hideFilterPanel();
         }
     }
 });
@@ -160,30 +218,43 @@ editMaxStudentsBtn.addEventListener('click', function() {
 
 // PC kartlarını yükle
 function loadPCCards(labId, labName) {
+    console.log('🔄 loadPCCards çağrıldı - labId:', labId, 'labName:', labName);
     pcLoadingIndicator.style.display = 'block';
     pcCardsContainer.style.display = 'none';
     
     // AJAX ile PC verilerini getir
-    fetch(`../controllers/AssignmentController.php?action=get_lab_pcs&computer_id=${labId}`)
-        .then(response => response.json())
+    const url = `../controllers/AssignmentController.php?action=get_lab_pcs&lab_id=${labId}`;
+    console.log('📡 İstek URL:', url);
+    
+    fetch(url)
+        .then(response => {
+            console.log('📡 Response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('📡 Response data:', data);
             if (data.success) {
+                console.log('✅ PC verileri başarıyla yüklendi, PC sayısı:', data.pcs ? data.pcs.length : 0);
                 displayPCCards(data.pcs, labName, labId);
             } else {
+                console.error('❌ PC verileri yüklenirken hata:', data.message);
                 showToast('PC verileri yüklenirken hata oluştu: ' + data.message, 'error');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('❌ Fetch hatası:', error);
             showToast('PC verileri yüklenirken bir hata oluştu', 'error');
         })
         .finally(() => {
+            console.log('🔄 Loading indicator kapatılıyor');
             pcLoadingIndicator.style.display = 'none';
         });
 }
 
 // PC kartlarını görüntüle
 function displayPCCards(pcs, labName, labId) {
+    console.log('🎨 displayPCCards çağrıldı - pcs:', pcs, 'labName:', labName, 'labId:', labId);
+    
     const pcCardsLabName = document.getElementById('pcCardsLabName');
     if (pcCardsLabName) {
         pcCardsLabName.textContent = labName + ' PC\'leri';
@@ -199,7 +270,7 @@ function displayPCCards(pcs, labName, labId) {
     let cardsHTML = '';
     
     pcs.forEach(pc => {
-        const isOccupied = pc.student_count > 0;
+        const isOccupied = pc.students && pc.students.length > 0;
         if (isOccupied) {
             occupiedCount++;
         } else {
@@ -207,11 +278,11 @@ function displayPCCards(pcs, labName, labId) {
         }
         
         const statusClass = isOccupied ? 'occupied' : 'available';
-        const statusText = isOccupied ? 'Öğrenci Sayısı' : 'Boş';
+        const statusText = isOccupied ? 'Dolu' : 'Boş';
         const statusIcon = isOccupied ? 'fas fa-user' : 'fas fa-desktop';
         
         // Öğrenci sayısı bilgisini ekle
-        const studentCount = pc.student_count || 0;
+        const studentCount = pc.students ? pc.students.length : 0;
         
         let studentInfo = '';
         if (isOccupied && pc.students && pc.students.length > 0) {
@@ -221,8 +292,8 @@ function displayPCCards(pcs, labName, labId) {
                 pc.students.forEach(student => {
                     studentsList += `
                         <div class="student-item">
-                            <span class="student-name clickable-student" data-student-number="${student.sdt_nmbr}" data-student-name="${student.full_name}">${student.full_name}</span>
-                            <span class="student-year">${student.academic_year || 'N/A'}</span>
+                            <div class="student-name clickable-student" data-student-number="${student.sdt_nmbr}" data-student-name="${student.full_name}">${student.full_name}</div>
+                            <div class="student-year">${student.academic_year || 'N/A'}</div>
                         </div>
                     `;
                 });
@@ -246,8 +317,8 @@ function displayPCCards(pcs, labName, labId) {
         // PC ID'si olarak gerçek PC ID'sini kullan
         const pcId = pc.pc_id || pcNumber; // Önce pc_id, yoksa PC numarası
         
-        // Çok sayıda öğrenci için özel sınıf
-        const manyStudentsClass = pc.students && pc.students.length >= 5 ? 'many-students' : '';
+        // Çok sayıda öğrenci için özel sınıf (4 veya daha fazla öğrenci)
+        const manyStudentsClass = pc.students && pc.students.length >= 4 ? 'many-students' : '';
         
         cardsHTML += `
             <div class="pc-card ${statusClass} ${manyStudentsClass}" data-pc-id="${pcId}" data-pc-number="${pcNumber}">
@@ -274,10 +345,14 @@ function displayPCCards(pcs, labName, labId) {
         `;
     });
     
+    console.log('🎨 PC kartları HTML oluşturuldu, kart sayısı:', pcs.length);
+    console.log('🎨 Available PCs:', availableCount, 'Occupied PCs:', occupiedCount);
+    
     pcCardsGrid.innerHTML = cardsHTML;
     availablePCs.textContent = availableCount;
     occupiedPCs.textContent = occupiedCount;
     
+    console.log('🎨 pcCardsContainer görünür yapılıyor');
     pcCardsContainer.style.display = 'block';
     
     // Kartlara animasyon ekle
@@ -292,6 +367,13 @@ function displayPCCards(pcs, labName, labId) {
         // Öğrenci isimlerine tıklama event listener'ı ekle
         addStudentNameClickListeners();
     }, 100);
+    
+    // Filtreleme sistemini güncelle
+    if (window.studentYearFilter) {
+        // PC kartları güncellendi eventi gönder
+        const event = new CustomEvent('pcCardsUpdated');
+        document.dispatchEvent(event);
+    }
 }
 
 

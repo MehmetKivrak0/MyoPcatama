@@ -14,6 +14,7 @@ require_once '../config/db.php';
 require_once '../models/Student.php';
 require_once '../models/Lab.php';
 require_once '../models/Assignment.php';
+require_once '../controllers/LabController.php';
 
 // Detaylı istatistikleri al
 try {
@@ -22,8 +23,13 @@ try {
     // Öğrenci sayısı - myopc_students tablosundan
     $studentCount = $db->fetchOne("SELECT COUNT(*) as count FROM myopc_students")['count'] ?? 0;
     
-    // Lab sayısı - myopc_lab_computers tablosundan
-    $labCount = $db->fetchOne("SELECT COUNT(*) as count FROM myopc_lab_computers")['count'] ?? 0;
+    // Lab sayısı - LabController kullanarak (index.html ile aynı yöntem)
+    $labController = new LabController();
+    $labsResult = $labController->getAllLabs();
+    $labCount = 0;
+    if ($labsResult['type'] === 'success') {
+        $labCount = count($labsResult['data']);
+    }
     
     // Toplam atama sayısı - myopc_assignments tablosundan
     $assignmentCount = $db->fetchOne("SELECT COUNT(*) as count FROM myopc_assignments")['count'] ?? 0;
@@ -31,11 +37,18 @@ try {
     // Son eklenen öğrenciler
     $recentStudents = $db->fetchAll("SELECT student_name, student_surname, created_at FROM myopc_students ORDER BY created_at DESC LIMIT 5");
     
+    // Debug için log ekle
+    error_log("Dashboard Stats - Student Count: " . $studentCount);
+    error_log("Dashboard Stats - Lab Count: " . $labCount);
+    error_log("Dashboard Stats - Assignment Count: " . $assignmentCount);
+    error_log("Dashboard Stats - Labs Result: " . json_encode($labsResult));
+    
 } catch (Exception $e) {
     $studentCount = 0;
     $labCount = 0;
     $assignmentCount = 0;
     $recentStudents = [];
+    error_log("Dashboard Stats Error: " . $e->getMessage());
 }
 ?>
 
@@ -47,7 +60,7 @@ try {
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Dashboard - MyOPC Yönetim Sistemi</title>
+    <title> Öğrenci Atama Sistemi</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -58,6 +71,407 @@ try {
     <link href="css/dashboard.css?v=<?php echo time(); ?>" rel="stylesheet">
     <link href="css/pc-update.css?v=<?php echo time(); ?>" rel="stylesheet">
     <link href="css/student_cards.css?v=<?php echo time(); ?>" rel="stylesheet">
+    
+    <!-- Student Year Filter CSS -->
+    <style>
+        /* Filtreleme paneli için ek stiller */
+        .student-filter-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(30, 58, 95, 0.2);
+            border: 1px solid rgba(135, 206, 235, 0.2);
+            position: relative;
+            overflow: hidden;
+            display: none;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+        
+        .student-filter-panel.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .student-filter-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(135, 206, 235, 0.05) 0%, rgba(30, 58, 95, 0.05) 100%);
+            pointer-events: none;
+        }
+        
+        .filter-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .filter-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #ffffff;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-shadow: 0 2px 10px rgba(30, 58, 95, 0.5);
+            margin: 0;
+        }
+        
+        .filter-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .year-filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .year-filter-btn {
+            padding: 8px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        .year-filter-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #87ceeb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(135, 206, 235, 0.3);
+            color: #ffffff;
+        }
+        
+        .year-filter-btn.active {
+            background: linear-gradient(135deg, #87ceeb, #2d5a87);
+            border-color: #87ceeb;
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(135, 206, 235, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .show-all-btn {
+            padding: 8px 16px;
+            border: 2px solid rgba(34, 197, 94, 0.3);
+            border-radius: 25px;
+            background: rgba(34, 197, 94, 0.1);
+            color: rgba(34, 197, 94, 0.9);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        .show-all-btn:hover {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: #22c55e;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+        
+        .show-all-btn.active {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border-color: #22c55e;
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .clear-filters-btn {
+            padding: 8px 16px;
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            border-radius: 25px;
+            background: rgba(239, 68, 68, 0.1);
+            color: rgba(239, 68, 68, 0.9);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        .clear-filters-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+            color: #dc2626;
+        }
+        
+        .filter-stats {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .filter-stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .filter-stat-item i {
+            color: #87ceeb;
+            font-size: 0.8rem;
+        }
+        
+        .filter-stat-number {
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        /* Filtreleme durumu sınıfları - animasyon yok */
+        .student-card-filtered {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        
+        .student-card-visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .pc-card.filtered {
+            display: none !important;
+        }
+        
+        .pc-card.visible {
+            display: block !important;
+        }
+        
+        /* PC kartları grid - eşit boyut için düzenleme */
+        .pc-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            justify-items: stretch; /* Kartları tam genişlikte yap */
+            align-items: stretch; /* Kartları eşit yükseklikte yap */
+            width: 100%;
+        }
+        
+        .pc-cards-grid .pc-card {
+            width: 100%;
+            height: 350px; /* Sabit yükseklik - tüm kartlar eşit */
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* PC kartı içeriği için flex düzenleme */
+        .pc-card-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Öğrenci listesi için tek sütun düzenleme */
+        .students-list {
+            display: flex;
+            flex-direction: column; /* Tek sütun - alt alta */
+            gap: 4px; /* Azaltılmış gap */
+            flex: 1;
+        }
+        
+        /* Öğrenci öğeleri için düzenleme */
+        .student-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 6px 8px; /* Dikey padding azaltıldı */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: row; /* Yatay düzenleme */
+            justify-content: space-between; /* İsim ve yıl arasında boşluk */
+            align-items: center;
+            text-align: left; /* Sol hizalama */
+            min-height: 40px; /* Azaltılmış minimum yükseklik */
+            width: 100%; /* Tam genişlik */
+        }
+        
+        .student-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #ffffff;
+            flex: 1; /* Kalan alanı kapla */
+            word-break: break-word;
+            line-height: 1.2;
+        }
+        
+        .student-year {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-left: 8px; /* İsimden sonra boşluk */
+            white-space: nowrap; /* Yıl tek satırda kalsın */
+        }
+        
+        /* Tüm öğrenci sayıları için tek sütun düzenleme */
+        .pc-card .students-list {
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        
+        /* PC kartı yükseklik kontrolü - eşit boyut için */
+        .pc-card {
+            height: 350px; /* Sabit yükseklik */
+            overflow: hidden; /* Taşan içeriği gizle */
+            box-sizing: border-box; /* Padding ve border'ı genişliğe dahil et */
+        }
+        
+        /* PC kartları container'ı tam genişlik */
+        .pc-cards-container {
+            width: 100%;
+            max-width: 100%;
+        }
+        
+        /* Öğrenci listesi için eşit boyut */
+        .students-list {
+            max-height: 200px; /* Sabit yükseklik */
+            overflow: visible; /* Scroll yok */
+            flex: 1; /* Kalan alanı kapla */
+        }
+        
+        /* Boş PC kartı için düzenleme */
+        .empty-pc {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+        
+        .empty-pc i {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            opacity: 0.5;
+        }
+        
+        /* PC kart durumları */
+        .pc-card.occupied {
+            opacity: 0;
+            animation: fadeIn 0.5s ease-in-out forwards;
+        }
+        
+        .pc-card.visible {
+            opacity: 1;
+            display: block !important;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .filter-header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .filter-controls {
+                flex-direction: column;
+                gap: 1rem;
+                width: 100%;
+            }
+            
+            .year-filter-buttons {
+                justify-content: center;
+                width: 100%;
+            }
+            
+            .year-filter-btn, .show-all-btn, .clear-filters-btn {
+                flex: 1;
+                min-width: 0;
+                text-align: center;
+            }
+            
+            /* Mobilde PC kartları tek sütun ve eşit boyut */
+            .pc-cards-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                padding: 0 1rem; /* Yan boşluklar ekle */
+            }
+            
+            .pc-cards-grid .pc-card {
+                width: 100%;
+                height: 350px; /* Mobilde de aynı yükseklik */
+                max-width: none; /* Maksimum genişlik sınırını kaldır */
+            }
+            
+            /* Mobilde öğrenci listesi tek sütun */
+            .students-list {
+                display: flex !important;
+                flex-direction: column !important;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            /* Çok küçük ekranlarda öğrenci isimlerini daha küçük yap */
+            .student-name {
+                font-size: 0.8rem;
+            }
+            
+            .student-year {
+                font-size: 0.7rem;
+            }
+            
+            .student-item {
+                min-height: 50px;
+                padding: 6px;
+            }
+        }
+    </style>
     
     <!-- Export Button Styles -->
     <style>
@@ -80,51 +494,50 @@ try {
 </head>
 <body>
     <!-- Top Header Bar -->
-    <div class="top-header-bar" style="background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 100%); border-bottom: 1px solid #e5e7eb;">
+    <div class="top-header-bar">
         <div class="container-fluid">
             <div class="row align-items-center">
                 <!-- Logo and Title -->
-                <div class="col-md-4">
-                    <div class="logo-section d-flex align-items-center">
-                        <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" class="header-logo" style="width: 40px; height: 40px; margin-right: 15px;">
+                <div class="col-lg-3 col-md-4 col-sm-12 mb-2 mb-md-0">
+                    <div class="logo-section d-flex align-items-center justify-content-center justify-content-md-start">
+                        <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" class="header-logo">
                         <div class="logo-text">
-                            <div class="brand-name" style="color: white; font-size: 28px; font-weight: 700; margin: 0;">MyOPC</div>
-                            <div class="brand-subtitle" style="color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 400; margin: 0;">Öğrenci Yönetimi</div>
+                            <div class="brand-name">Öğrenci Atama <br> Sistemi</div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Stats Section -->
-                <div class="col-md-4">
-                    <div class="header-stats d-flex justify-content-between">
-                        <div class="header-stat-item" style="color: white; text-align: center; margin: 0 20px;">
-                            <i class="fas fa-users" style="font-size: 20px; display: block; margin-bottom: 5px;"></i>
-                            <span class="stat-number" style="font-size: 24px; font-weight: 700; display: block;"><?php echo $studentCount; ?></span>
-                            <span class="stat-label" style="font-size: 12px; opacity: 0.9;">Öğrenci</span>
+                <div class="col-lg-6 col-md-5 col-sm-12 mb-2 mb-md-0">
+                    <div class="header-stats d-flex justify-content-center flex-wrap">
+                        <div class="header-stat-item">
+                            <i class="fas fa-users"></i>
+                            <span class="stat-number"><?php echo $studentCount; ?></span>
+                            <span class="stat-label">Öğrenci</span>
                         </div>
-                        <div class="header-stat-item" style="color: white; text-align: center; margin: 0 20px;">
-                            <i class="fas fa-building" style="font-size: 20px; display: block; margin-bottom: 5px;"></i>
-                            <span class="stat-number" style="font-size: 24px; font-weight: 700; display: block;"><?php echo $labCount; ?></span>
-                            <span class="stat-label" style="font-size: 12px; opacity: 0.9;">Laboratuvar</span>
+                        <div class="header-stat-item">
+                            <i class="fas fa-building"></i>
+                            <span class="stat-number"><?php echo $labCount; ?></span>
+                            <span class="stat-label">Laboratuvar</span>
                         </div>
-                        <div class="header-stat-item" style="color: white; text-align: center; margin: 0 20px;">
-                            <i class="fas fa-tasks" style="font-size: 20px; display: block; margin-bottom: 5px;"></i>
-                            <span class="stat-number" style="font-size: 24px; font-weight: 700; display: block;"><?php echo $assignmentCount; ?></span>
-                            <span class="stat-label" style="font-size: 12px; opacity: 0.9;">Atama</span>
+                        <div class="header-stat-item">
+                            <i class="fas fa-tasks"></i>
+                            <span class="stat-number"><?php echo $assignmentCount; ?></span>
+                            <span class="stat-label">Atama</span>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Action Buttons -->
-                <div class="col-md-4">
-                    <div class="header-actions d-flex justify-content-end align-items-center">
-                        <button class="header-btn action-button excel-import-btn" onclick="openExcelImport()" style="color: white; text-decoration: none; margin-right: 15px; padding: 8px 16px; border-radius: 6px; background: rgba(255,255,255,0.1); transition: all 0.3s ease; border: none;">
-                            <i class="fas fa-file-excel" style="margin-right: 8px;"></i>
-                            Excel'den İçe Aktar
+                <div class="col-lg-3 col-md-3 col-sm-12">
+                    <div class="header-actions d-flex justify-content-center justify-content-lg-end flex-wrap">
+                        <button class="header-btn action-button excel-import-btn" onclick="openExcelImport()">
+                            <i class="fas fa-file-excel"></i>
+                            <span class="btn-text">Excel'den İçe Aktar</span>
                         </button>
-                        <a href="../logout.php" class="header-btn" style="color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; background: rgba(255,255,255,0.1); transition: all 0.3s ease;">
-                            <i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i>
-                            Çıkış Yap
+                        <a href="../logout.php" class="header-btn logout-btn">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span class="btn-text">Çıkış Yap</span>
                         </a>
                     </div>
                 </div>
@@ -140,27 +553,27 @@ try {
 
             <!-- Action Buttons Row -->
             <div class="action-buttons-row mb-4">
-                <div class="container">
+                <div class="container-fluid">
                     <div class="action-buttons-container">
                         <a href="student_management.php" class="action-button students-btn">
                             <i class="fas fa-users"></i>
-                            Öğrenciler
+                            <span class="btn-text">Öğrenciler</span>
                         </a>
                         <a href="lab_list.php" class="action-button labs-btn">
                             <i class="fas fa-building"></i>
-                            Laboratuvarlar
+                            <span class="btn-text">Laboratuvarlar</span>
                         </a>
                         <a href="add_lab.php" class="action-button new-lab-btn">
                             <i class="fas fa-plus"></i>
-                            Yeni Laboratuvar Ekle
+                            <span class="btn-text">Yeni Laboratuvar Ekle</span>
                         </a>
                         <button class="action-button assignments-btn" id="exportAssignmentsBtn" onclick="exportAssignments()" disabled>
                             <i class="fas fa-download"></i>
-                            Atamaları Dışa Aktar
+                            <span class="btn-text">Atamaları Dışa Aktar</span>
                         </button>
                         <button class="action-button test-btn" onclick="openTestPage()" id="testButton">
                             <i class="fas fa-bug"></i>
-                            Atama Testi
+                            <span class="btn-text">Atama Testi</span>
                         </button>
                      </div>
                 </div>
@@ -183,25 +596,70 @@ try {
                                     try {
                                         $labModel = new Lab($db);
                                         $labs = $labModel->getAll();
+                                        error_log("Dashboard - Laboratuvarlar yüklendi: " . count($labs));
                                         foreach ($labs as $lab) {
+                                            error_log("Dashboard - Lab: " . $lab['lab_name'] . " (ID: " . $lab['computer_id'] . ", PC Count: " . $lab['pc_count'] . ")");
                                             echo '<option value="' . $lab['computer_id'] . '" data-pc-count="' . $lab['pc_count'] . '">' . htmlspecialchars($lab['lab_name']) . ' (' . $lab['pc_count'] . ' PC)</option>';
                                         }
+                                        // Debug için JavaScript'e laboratuvar sayısını gönder
+                                        echo '<script>console.log("Dashboard - PHP\'den laboratuvar sayısı: ' . count($labs) . '");</script>';
                                     } catch (Exception $e) {
+                                        error_log("Dashboard - Laboratuvar yükleme hatası: " . $e->getMessage());
                                         echo '<option value="">Laboratuvar listesi alınamadı</option>';
+                                        echo '<script>console.error("Dashboard - Laboratuvar yükleme hatası: ' . addslashes($e->getMessage()) . '");</script>';
                                     }
                                     ?>
                                 </select>
                                 <i class="fas fa-chevron-down select-arrow"></i>
                             </div>
-                            <button id="refreshPCs" class="refresh-btn" title="PC Durumlarını Yenile">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                            <button id="editPCCount" class="edit-pc-btn" title="PC Sayısını Düzenle" style="display: none;">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button id="editMaxStudents" class="edit-max-students-btn" title="Maksimum Öğrenci Sayısını Düzenle" style="display: none;">
+                            <div class="control-buttons">
+                                <button id="refreshPCs" class="refresh-btn" title="PC Durumlarını Yenile">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                <button id="editPCCount" class="edit-pc-btn" title="PC Sayısını Düzenle" style="display: none;">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button id="editMaxStudents" class="edit-max-students-btn" title="Maksimum Öğrenci Sayısını Düzenle" style="display: none;">
+                                    <i class="fas fa-users"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Öğrenci Yılı Filtreleme Paneli -->
+                    <div class="student-filter-panel" id="studentFilterPanel">
+                        <div class="filter-header">
+                            <h3 class="filter-title">
+                                <i class="fas fa-filter"></i>
+                                Öğrenci Yılı Filtreleme
+                            </h3>
+                            <div class="filter-controls">
+                                <div class="year-filter-buttons" id="yearFilterButtons">
+                                    <!-- Yıl butonları dinamik olarak eklenecek -->
+                                </div>
+                                <button class="show-all-btn active" id="showAllBtn">
+                                    <i class="fas fa-eye"></i>
+                                    Tümünü Göster
+                                </button>
+                                <button class="clear-filters-btn" id="clearFiltersBtn">
+                                    <i class="fas fa-times"></i>
+                                    Temizle
+                                </button>
+                            </div>
+                        </div>
+                        <div class="filter-stats" id="filterStats">
+                            <div class="filter-stat-item">
                                 <i class="fas fa-users"></i>
-                            </button>
+                                <span>Toplam: <span class="filter-stat-number" id="totalStudents">0</span></span>
+                            </div>
+                            <div class="filter-stat-item">
+                                <i class="fas fa-eye"></i>
+                                <span>Görünen: <span class="filter-stat-number" id="visibleStudents">0</span></span>
+                            </div>
+                            <div class="filter-stat-item">
+                                <i class="fas fa-filter"></i>
+                                <span>Filtre: <span class="filter-stat-number" id="currentFilterText">Tümü</span></span>
+                            </div>
                         </div>
                     </div>
 
@@ -591,6 +1049,21 @@ try {
     <script src="js/dasboard.js?v=<?php echo time(); ?>"></script>
     <script src="js/pc-update.js?v=<?php echo time(); ?>"></script>
     <script src="js/export-assignments.js?v=<?php echo time(); ?>"></script>
+    <script src="js/student-year-filter.js?v=<?php echo time(); ?>"></script>
+    <script>
+        // Sayfa yüklendiğinde laboratuvar seçimi yapılmaz
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Dashboard yüklendi');
+            const labSelector = document.getElementById('labSelector');
+            console.log('🔍 Laboratuvar seçici bulundu:', labSelector);
+            console.log('🔍 Laboratuvar seçici options sayısı:', labSelector ? labSelector.options.length : 0);
+            
+            // Laboratuvar seçimi yapılmaz, kullanıcı manuel olarak seçmeli
+            console.log('ℹ️ Laboratuvar seçimi kullanıcıya bırakıldı');
+            
+            // Filtreleme sistemi yüklendi
+        });
+    </script>
     <script>
         // Test sayfasını aç
         function openTestPage() {
@@ -890,6 +1363,7 @@ try {
             
             document.getElementById('overall-result').innerHTML = resultHTML;
         }
+
 
         // Sayfa yüklendiğinde test butonunu kontrol et
         document.addEventListener('DOMContentLoaded', function() {

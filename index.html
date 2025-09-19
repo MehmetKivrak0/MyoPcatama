@@ -8,7 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
@@ -28,23 +28,6 @@
             margin-bottom: 2rem;
             opacity: 0.9;
         }
-        .feature-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 2rem;
-            margin: 1rem;
-            transition: transform 0.3s ease;
-        }
-        .feature-card:hover {
-            transform: translateY(-10px);
-        }
-        .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            color: #ffd700;
-        }
         .btn-custom {
             background: linear-gradient(45deg, #ff6b6b, #ee5a24);
             border: none;
@@ -60,25 +43,350 @@
             transform: translateY(-3px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
-        .stats-section {
+        
+        /* PC Cards Styles */
+        .pc-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .pc-card {
             background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 15px;
+            padding: 1rem;
+            border: 2px solid transparent;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .pc-card.available {
+            border-color: rgba(34, 197, 94, 0.4);
+            box-shadow: 0 10px 30px rgba(34, 197, 94, 0.2);
+        }
+        
+        .pc-card.occupied {
+            border-color: rgba(239, 68, 68, 0.4);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2);
+        }
+        
+        .pc-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+        
+        .pc-number {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(30, 58, 95, 0.5);
+        }
+        
+        .pc-status {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .pc-card.available .pc-status {
+            background: #22c55e;
+            border: 1px solid #16a34a;
+        }
+        
+        .pc-card.occupied .pc-status {
+            background: #dc2626;
+            border: 1px solid #991b1b;
+        }
+        
+        .student-count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            color: #dc2626;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 6px;
+            border: 1px solid #dc2626;
+        }
+        
+        .student-info {
+            flex: 1;
+        }
+        
+        .students-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.3rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .student-name {
+            font-weight: 600;
+            color: #ffffff;
+            font-size: 0.75rem;
+        }
+        
+        .student-year {
+            color: #e5e7eb;
+            font-size: 0.7rem;
+        }
+        
+        /* Rastgele seçilen PC için özel stil */
+        .pc-card.random-selected {
+            border: 3px solid #0ea5e9 !important;
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.6) !important;
+            animation: randomPulse 2s ease-in-out infinite;
+            transform: scale(1.05);
+        }
+        
+        @keyframes randomPulse {
+            0% { box-shadow: 0 0 30px rgba(14, 165, 233, 0.6); }
+            50% { box-shadow: 0 0 40px rgba(14, 165, 233, 0.8); }
+            100% { box-shadow: 0 0 30px rgba(14, 165, 233, 0.6); }
+        }
+        
+        /* Toast Bildirim Stilleri */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        }
+        
+        .toast {
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .toast.success {
+            border-left: 4px solid #22c55e;
+        }
+        
+        .toast.error {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .toast.warning {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .toast.info {
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .toast-icon {
+            font-size: 1.2rem;
+            margin-right: 12px;
+        }
+        
+        .toast.success .toast-icon {
+            color: #22c55e;
+        }
+        
+        .toast.error .toast-icon {
+            color: #ef4444;
+        }
+        
+        .toast.warning .toast-icon {
+            color: #f59e0b;
+        }
+        
+        .toast.info .toast-icon {
+            color: #3b82f6;
+        }
+        
+        .toast-content {
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .toast-title {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .toast-message {
+            color: #6b7280;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        
+        .toast-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: color 0.2s ease;
+        }
+        
+        .toast-close:hover {
+            color: #6b7280;
+        }
+        
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+            border-radius: 0 0 12px 12px;
+            animation: progress 5s linear forwards;
+        }
+        
+        @keyframes progress {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+        
+        /* Büyük rastgele PC bildirimi */
+        .random-pc-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10000;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1f2937;
+            padding: 2rem 3rem;
             border-radius: 20px;
-            padding: 3rem;
-            margin: 3rem 0;
-        }
-        .stat-item {
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             text-align: center;
-            color: white;
+            animation: randomPCAppear 0.5s ease-out;
+            border: 3px solid #ffffff;
+            min-width: 400px;
+            max-width: 600px;
         }
-        .stat-number {
+        
+        .random-pc-notification h2 {
             font-size: 2.5rem;
             font-weight: 700;
-            color: #ffd700;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
         }
-        .stat-label {
-            font-size: 1.1rem;
-            opacity: 0.9;
+        
+        .random-pc-notification .pc-number {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #1f2937;
+            margin: 1rem 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        
+        .random-pc-notification .countdown {
+            font-size: 1rem;
+            color: #6b7280;
+            margin-top: 1rem;
+        }
+        
+        .random-pc-notification .student-info {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .random-pc-notification .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .random-pc-notification .student-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .random-pc-notification .student-name {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 1rem;
+        }
+        
+        .random-pc-notification .student-year {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+        
+        @keyframes randomPCAppear {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        
+        .random-pc-notification.fade-out {
+            animation: randomPCFadeOut 0.5s ease-in forwards;
+        }
+        
+        @keyframes randomPCFadeOut {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
         }
     </style>
 </head>
@@ -97,9 +405,7 @@
             </p>
             
             <div class="mt-4">
-                <a href="views/register.php" class="btn btn-custom btn-lg">
-                    <i class="fas fa-user-plus"></i> Kayıt Ol
-                </a>
+                
                  <a href="views/iambatman.php" class="btn btn-outline-light btn-lg">
                     <i class="fas fa-sign-in-alt"></i> Giriş Yap
                 </a>
@@ -107,70 +413,53 @@
         </div>
     </div>
 
-    <!-- Features Section -->
-    <div class="container">
-        <div class="row">
-            <div class="col-md-4">
-                <div class="feature-card text-center">
-                    <div class="feature-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <h4>Öğrenci Yönetimi</h4>
-                    <p>Öğrenci bilgilerini kaydedin, düzenleyin ve takip edin. CSV dosyasından toplu import yapın.</p>
-                </div>
+  
+
+
+    <!-- PC Cards Preview Section -->
+    <div class="container mt-5">
+        <div class="text-center mb-4">
+            <h2 class="text-white mb-3">
+                <i class="fas fa-desktop"></i> Laboratuvar Durumu
+            </h2>
+            <p class="text-white-50">Gerçek zamanlı PC atama durumu</p>
+        </div>
+        
+        <!-- Laboratuvar Seçici -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-md-6">
+                <select id="labSelector" class="form-select form-select-lg">
+                    <option value="">Laboratuvar Seçin...</option>
+                </select>
             </div>
-            <div class="col-md-4">
-                <div class="feature-card text-center">
-                    <div class="feature-icon">
-                        <i class="fas fa-desktop"></i>
-                    </div>
-                    <h4>Bilgisayar Ataması</h4>
-                    <p>Öğrencileri laboratuvarlardaki bilgisayarlara atayın. Gerçek zamanlı durum takibi yapın.</p>
-                </div>
+        </div>
+        
+        <!-- Rastgele PC Seç Butonu -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-md-6 text-center">
+                <button id="randomPCBtn" class="btn btn-warning btn-lg" onclick="selectRandomLab()" disabled>
+                    <i class="fas fa-random"></i> Rastgele PC Seç
+                </button>
+                <p class="text-white-50 mt-2 small">Önce laboratuvar seçin, sonra rastgele PC seçin</p>
             </div>
-            <div class="col-md-4">
-                <div class="feature-card text-center">
-                    <div class="feature-icon">
-                        <i class="fas fa-building"></i>
-                    </div>
-                    <h4>Laboratuvar Yönetimi</h4>
-                    <p>Farklı laboratuvarları yönetin. Her laboratuvardaki bilgisayar sayısını takip edin.</p>
-                </div>
+        </div>
+        
+        <!-- PC Kartları -->
+        <div id="pcCardsContainer" class="pc-cards-grid" style="display: none;">
+            <!-- PC kartları buraya dinamik olarak yüklenecek -->
+        </div>
+        
+        <!-- Yükleme göstergesi -->
+        <div id="pcLoadingIndicator" class="text-center" style="display: none;">
+            <div class="spinner-border text-light" role="status">
+                <span class="visually-hidden">Yükleniyor...</span>
             </div>
+            <p class="text-white mt-2">PC verileri yükleniyor...</p>
         </div>
     </div>
 
-    <!-- Stats Section -->
-    <div class="container">
-        <div class="stats-section">
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="stat-item">
-                        <div class="stat-number">3+</div>
-                        <div class="stat-label">Laboratuvar</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stat-item">
-                        <div class="stat-number">60+</div>
-                        <div class="stat-label">Bilgisayar</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stat-item">
-                        <div class="stat-number">∞</div>
-                        <div class="stat-label">Öğrenci</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stat-item">
-                        <div class="stat-number">24/7</div>
-                        <div class="stat-label">Erişim</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Toast Bildirim Container -->
+    <div id="toastContainer" class="toast-container"></div>
 
     <!-- Footer -->
     <footer class="text-center text-white py-4">
@@ -183,5 +472,497 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sayfa yüklendiğinde istatistikleri ve laboratuvarları çek
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadLabs();
+        });
+
+        function loadStats() {
+            console.log('İstatistikler yükleniyor...');
+            
+            // Laboratuvar sayısını çek
+            fetch('controllers/LabController.php?action=get_lab_count')
+                .then(response => {
+                    console.log('Lab count response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Lab count data:', data);
+                    if (data.success) {
+                        document.getElementById('labCount').textContent = data.count + '+';
+                    } else {
+                        document.getElementById('labCount').textContent = '0+';
+                    }
+                })
+                .catch(error => {
+                    console.error('Laboratuvar sayısı alınırken hata:', error);
+                    document.getElementById('labCount').textContent = '0+';
+                });
+
+            // Toplam PC sayısını çek
+            fetch('controllers/LabController.php?action=get_all_labs')
+                .then(response => {
+                    console.log('All labs response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('All labs data:', data);
+                    if (data.type === 'success') {
+                        let totalPcCount = 0;
+                        data.data.forEach(lab => {
+                            totalPcCount += parseInt(lab.pc_count) || 0;
+                        });
+                        document.getElementById('pcCount').textContent = totalPcCount + '+';
+                    } else {
+                        document.getElementById('pcCount').textContent = '0+';
+                    }
+                })
+                .catch(error => {
+                    console.error('PC sayısı alınırken hata:', error);
+                    document.getElementById('pcCount').textContent = '0+';
+                });
+        }
+
+        function loadLabs() {
+            console.log('Laboratuvarlar yükleniyor...');
+            
+            // Laboratuvarları yükle
+            fetch('controllers/LabController.php?action=get_all_labs')
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Laboratuvar verisi:', data);
+                    if (data.type === 'success') {
+                        const labSelector = document.getElementById('labSelector');
+                        labSelector.innerHTML = '<option value="">Laboratuvar Seçin...</option>';
+                        
+                        if (data.data && data.data.length > 0) {
+                            data.data.forEach(lab => {
+                                const option = document.createElement('option');
+                                option.value = lab.computer_id;
+                                option.textContent = `${lab.lab_name} (${lab.pc_count} PC)`;
+                                labSelector.appendChild(option);
+                            });
+                            console.log('Laboratuvarlar yüklendi:', data.data.length);
+                            showToast(`${data.data.length} laboratuvar yüklendi`, 'success', 'Başarılı');
+                            
+                            // Rastgele PC butonunu aktif et
+                            document.getElementById('randomPCBtn').disabled = false;
+                        } else {
+                            console.log('Laboratuvar verisi boş');
+                            labSelector.innerHTML = '<option value="">Laboratuvar bulunamadı</option>';
+                            showToast('Laboratuvar bulunamadı', 'warning', 'Uyarı');
+                        }
+                        
+                        // Laboratuvar seçildiğinde PC kartlarını yükle
+                        labSelector.addEventListener('change', function() {
+                            console.log('Laboratuvar seçildi - raw value:', this.value);
+                            console.log('Laboratuvar seçildi - value length:', this.value.length);
+                            console.log('Laboratuvar seçildi - value type:', typeof this.value);
+                            const selectedLabId = this.value;
+                            console.log('selectedLabId:', selectedLabId);
+                            if (selectedLabId && selectedLabId !== '') {
+                                console.log('loadPCCards çağrılıyor...');
+                                loadPCCards(selectedLabId);
+                                
+                                // Rastgele PC butonunu aktif et
+                                document.getElementById('randomPCBtn').disabled = false;
+                            } else {
+                                console.log('Laboratuvar seçilmedi, PC kartları gizleniyor');
+                                document.getElementById('pcCardsContainer').style.display = 'none';
+                                
+                                // Rastgele PC butonunu devre dışı bırak
+                                document.getElementById('randomPCBtn').disabled = true;
+                            }
+                        });
+                    } else {
+                        console.error('API hatası:', data.message);
+                        document.getElementById('labSelector').innerHTML = '<option value="">Hata: ' + data.message + '</option>';
+                        showToast('API hatası: ' + data.message, 'error', 'Hata');
+                    }
+                })
+                .catch(error => {
+                    console.error('Laboratuvarlar yüklenirken hata:', error);
+                    document.getElementById('labSelector').innerHTML = '<option value="">Bağlantı hatası</option>';
+                    showToast('Bağlantı hatası oluştu', 'error', 'Hata');
+                });
+        }
+
+        function loadPCCards(labId) {
+            console.log('loadPCCards çağrıldı - labId:', labId);
+            console.log('labId tipi:', typeof labId);
+            console.log('labId boş mu:', !labId);
+            
+            const pcLoadingIndicator = document.getElementById('pcLoadingIndicator');
+            const pcCardsContainer = document.getElementById('pcCardsContainer');
+            
+            pcLoadingIndicator.style.display = 'block';
+            pcCardsContainer.style.display = 'none';
+            
+            // PC verilerini çek
+            const url = `controllers/AssignmentController.php?action=get_lab_pcs&lab_id=${labId}`;
+            console.log('İstek URL:', url);
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayPCCards(data.pcs);
+                        showToast(`${data.pcs.length} PC yüklendi`, 'info', 'PC Verileri');
+                    } else {
+                        console.error('PC verileri yüklenirken hata:', data.message);
+                        pcCardsContainer.innerHTML = '<div class="col-12 text-center text-white">PC verileri yüklenirken hata oluştu.</div>';
+                        showToast('PC verileri yüklenirken hata oluştu', 'error', 'Hata');
+                    }
+                })
+                .catch(error => {
+                    console.error('PC verileri yüklenirken hata:', error);
+                    pcCardsContainer.innerHTML = '<div class="col-12 text-center text-white">PC verileri yüklenirken hata oluştu.</div>';
+                    showToast('Bağlantı hatası oluştu', 'error', 'Hata');
+                })
+                .finally(() => {
+                    pcLoadingIndicator.style.display = 'none';
+                    pcCardsContainer.style.display = 'grid';
+                });
+        }
+
+        // Rastgele seçilen PC'yi takip etmek için global değişken
+        let selectedRandomPC = null;
+        
+        function displayPCCards(pcs, highlightRandom = false) {
+            const pcCardsContainer = document.getElementById('pcCardsContainer');
+            let cardsHTML = '';
+            
+            pcs.forEach(pc => {
+                const isOccupied = pc.students && pc.students.length > 0;
+                const studentCount = pc.students ? pc.students.length : 0;
+                const statusClass = isOccupied ? 'occupied' : 'available';
+                const statusText = isOccupied ? 'Dolu' : 'Boş';
+                const statusIcon = isOccupied ? 'fas fa-user' : 'fas fa-desktop';
+                
+                // PC numarasını güvenli şekilde oluştur
+                let pcNumber = '0';
+                if (pc.pc_number !== undefined && pc.pc_number !== null) {
+                    pcNumber = pc.pc_number.toString();
+                }
+                const pcDisplayNumber = `PC${pcNumber.padStart(2, '0')}`;
+                
+                // Rastgele seçilen PC'yi vurgula
+                const isRandomSelected = highlightRandom && selectedRandomPC && 
+                    selectedRandomPC.pc_number === pc.pc_number;
+                const randomClass = isRandomSelected ? ' random-selected' : '';
+                const starIcon = isRandomSelected ? ' <i class="fas fa-star text-warning"></i>' : '';
+                
+                // Öğrenci listesi
+                let studentsList = '';
+                if (isOccupied && pc.students) {
+                    pc.students.forEach(student => {
+                        studentsList += `
+                            <div class="student-item">
+                                <span class="student-name">${student.full_name}</span>
+                                <span class="student-year">${student.academic_year || 'N/A'}</span>
+                            </div>
+                        `;
+                    });
+                }
+                
+                cardsHTML += `
+                    <div class="pc-card ${statusClass}${randomClass}">
+                        <div class="pc-card-header">
+                            <div class="pc-number">${pcDisplayNumber}${starIcon}</div>
+                            <div class="pc-status">
+                                <i class="${statusIcon}"></i>
+                                <span>${statusText}</span>
+                                ${isOccupied ? `<span class="student-count-badge">${studentCount}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="pc-card-body">
+                            ${isOccupied ? `
+                                <div class="student-info">
+                                    <div class="students-list">
+                                        ${studentsList}
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="text-center text-white-50 mt-3">
+                                    <i class="fas fa-desktop fa-2x mb-2"></i>
+                                    <p>Bu PC şu anda boş</p>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            pcCardsContainer.innerHTML = cardsHTML;
+        }
+        
+        // Rastgele PC seçme fonksiyonu
+        function selectRandomLab() {
+            const labSelector = document.getElementById('labSelector');
+            const selectedLabId = labSelector.value;
+            
+            if (!selectedLabId || selectedLabId === '') {
+                showToast('Önce bir laboratuvar seçin!', 'warning', 'Uyarı');
+                return;
+            }
+            
+            // Seçili laboratuvardan PC verilerini çek
+            const url = `controllers/AssignmentController.php?action=get_lab_pcs&lab_id=${selectedLabId}`;
+            console.log('Rastgele PC için laboratuvar verisi çekiliyor:', url);
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.pcs && data.pcs.length > 0) {
+                        // Rastgele bir PC seç
+                        const randomIndex = Math.floor(Math.random() * data.pcs.length);
+                        const randomPC = data.pcs[randomIndex];
+                        
+                        console.log('Rastgele PC seçildi:', randomPC);
+                        
+                        // Seçilen PC'yi kaydet
+                        selectedRandomPC = randomPC;
+                        
+                        // Büyük bildirimi göster
+                        showRandomPCNotification(randomPC);
+                        
+                        // Sadece seçilen PC'yi göster
+                        displaySinglePC(randomPC);
+                        
+                        // 3 saniye sonra tüm PC'leri göster (seçilen PC vurgulanarak)
+                        setTimeout(() => {
+                            console.log('3 saniye geçti, tüm PC\'ler gösteriliyor...');
+                            displayPCCards(data.pcs, true); // highlightRandom = true
+                        }, 3000);
+                        
+                    } else {
+                        showToast('Bu laboratuvarda PC bulunamadı!', 'warning', 'Uyarı');
+                    }
+                })
+                .catch(error => {
+                    console.error('Rastgele PC seçilirken hata:', error);
+                    showToast('Rastgele PC seçilirken hata oluştu', 'error', 'Hata');
+                });
+        }
+        
+        // Tek PC gösterme fonksiyonu
+        function displaySinglePC(pc) {
+            const pcCardsContainer = document.getElementById('pcCardsContainer');
+            
+            const isOccupied = pc.students && pc.students.length > 0;
+            const studentCount = pc.students ? pc.students.length : 0;
+            const statusClass = isOccupied ? 'occupied' : 'available';
+            const statusText = isOccupied ? 'Dolu' : 'Boş';
+            const statusIcon = isOccupied ? 'fas fa-user' : 'fas fa-desktop';
+            
+            // PC numarasını güvenli şekilde oluştur
+            let pcNumber = '0';
+            if (pc.pc_number !== undefined && pc.pc_number !== null) {
+                pcNumber = pc.pc_number.toString();
+            }
+            const pcDisplayNumber = `PC${pcNumber.padStart(2, '0')}`;
+            
+            // Öğrenci listesi
+            let studentsList = '';
+            if (isOccupied && pc.students) {
+                pc.students.forEach(student => {
+                    studentsList += `
+                        <div class="student-item">
+                            <span class="student-name">${student.full_name}</span>
+                            <span class="student-year">${student.academic_year || 'N/A'}</span>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Tek PC kartı oluştur (rastgele seçilen PC için özel stil)
+            const singleCardHTML = `
+                <div class="pc-card ${statusClass} random-selected" style="grid-column: 1 / -1; max-width: 400px; margin: 0 auto;">
+                    <div class="pc-card-header">
+                        <div class="pc-number">${pcDisplayNumber} <i class="fas fa-star text-warning"></i></div>
+                        <div class="pc-status">
+                            <i class="${statusIcon}"></i>
+                            <span>${statusText}</span>
+                            ${isOccupied ? `<span class="student-count-badge">${studentCount}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="pc-card-body">
+                        ${isOccupied ? `
+                            <div class="student-info">
+                                <div class="students-list">
+                                    ${studentsList}
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="text-center text-white-50 mt-3">
+                                <i class="fas fa-desktop fa-2x mb-2"></i>
+                                <p>Bu PC şu anda boş</p>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+            
+            pcCardsContainer.innerHTML = singleCardHTML;
+            pcCardsContainer.style.display = 'grid';
+        }
+        
+        // Toast bildirim fonksiyonu
+        function showToast(message, type = 'info', title = 'Bildirim') {
+            const toastContainer = document.getElementById('toastContainer');
+            
+            // Toast elementini oluştur
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            // İkon belirle
+            let icon = 'fas fa-info-circle';
+            switch(type) {
+                case 'success':
+                    icon = 'fas fa-check-circle';
+                    break;
+                case 'error':
+                    icon = 'fas fa-exclamation-circle';
+                    break;
+                case 'warning':
+                    icon = 'fas fa-exclamation-triangle';
+                    break;
+                case 'info':
+                default:
+                    icon = 'fas fa-info-circle';
+                    break;
+            }
+            
+            // Toast içeriğini oluştur
+            toast.innerHTML = `
+                <button class="toast-close" onclick="closeToast(this)">&times;</button>
+                <div class="toast-content">
+                    <i class="toast-icon ${icon}"></i>
+                    <div>
+                        <div class="toast-title">${title}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                </div>
+                <div class="toast-progress"></div>
+            `;
+            
+            // Toast'ı container'a ekle
+            toastContainer.appendChild(toast);
+            
+            // Animasyon için kısa bir gecikme
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+            
+            // 5 saniye sonra otomatik kapat
+            setTimeout(() => {
+                closeToast(toast.querySelector('.toast-close'));
+            }, 5000);
+        }
+        
+        // Toast kapatma fonksiyonu
+        function closeToast(closeBtn) {
+            const toast = closeBtn.closest('.toast');
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 400);
+        }
+        
+        // Büyük rastgele PC bildirimi fonksiyonu
+        function showRandomPCNotification(pc) {
+            // Önceki bildirimi temizle
+            const existingNotification = document.querySelector('.random-pc-notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            const pcNumber = `PC${pc.pc_number.toString().padStart(2, '0')}`;
+            const isOccupied = pc.students && pc.students.length > 0;
+            const statusText = isOccupied ? 'Dolu' : 'Boş';
+            const statusIcon = isOccupied ? 'fas fa-user' : 'fas fa-desktop';
+            const studentCount = pc.students ? pc.students.length : 0;
+            
+            // Öğrenci listesi oluştur
+            let studentsList = '';
+            if (isOccupied && pc.students) {
+                pc.students.forEach(student => {
+                    studentsList += `
+                        <div class="student-item">
+                            <span class="student-name">${student.full_name}</span>
+                            <span class="student-year">${student.academic_year || 'N/A'}</span>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Bildirim HTML'i oluştur
+            const notificationHTML = `
+                <div class="random-pc-notification">
+                    <h2><i class="fas fa-star"></i> Rastgele PC Seçildi!</h2>
+                    <div class="pc-number">${pcNumber}</div>
+                    ${isOccupied ? `
+                        <div class="student-info">
+                            <div style="font-weight: 600; margin-bottom: 0.5rem; color: #1f2937;">
+                                <i class="fas fa-users"></i> Atanan Öğrenciler:
+                            </div>
+                            ${studentsList}
+                        </div>
+                    ` : `
+                        <div class="student-info">
+                            <div style="text-align: center; color: #6b7280;">
+                                <i class="fas fa-desktop fa-2x mb-2"></i>
+                                <p>Bu PC şu anda boş</p>
+                            </div>
+                        </div>
+                    `}
+                    <div class="countdown">
+                        <i class="fas fa-clock"></i> 3 saniye sonra tüm PC'ler gösterilecek...
+                    </div>
+                </div>
+            `;
+            
+            // Bildirimi sayfaya ekle
+            document.body.insertAdjacentHTML('beforeend', notificationHTML);
+            
+            // 2.5 saniye sonra bildirimi kapat
+            setTimeout(() => {
+                const notification = document.querySelector('.random-pc-notification');
+                if (notification) {
+                    notification.classList.add('fade-out');
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 500);
+                }
+            }, 2500);
+        }
+        
+        // Test fonksiyonları
+        function testLab1() {
+            console.log('Test Lab 1 çağrıldı');
+            loadPCCards('1');
+        }
+        
+        function testLab2() {
+            console.log('Test Lab 2 çağrıldı');
+            loadPCCards('2');
+        }
+        
+        function testLab3() {
+            console.log('Test Lab 3 çağrıldı');
+            loadPCCards('3');
+        }
+    </script>
 </body>
 </html>

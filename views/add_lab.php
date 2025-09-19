@@ -128,24 +128,126 @@ if ($_POST) {
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            border-radius: 10px;
-            padding: 0.75rem 2rem;
+            border-radius: 12px;
+            padding: 0.8rem 1.5rem;
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 1rem;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+            position: relative;
+            overflow: hidden;
         }
         
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
         
         .btn-secondary {
-            background: #6c757d;
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
             border: none;
-            border-radius: 10px;
-            padding: 0.75rem 2rem;
+            border-radius: 12px;
+            padding: 0.8rem 1.5rem;
             font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+            background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+        }
+        
+        .btn-secondary:active {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+        
+        /* Form Actions Styling */
+        .form-actions {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .form-actions .btn {
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 600;
+            text-transform: none;
+            letter-spacing: 0.5px;
+        }
+        
+        .form-actions .btn i {
+            font-size: 1.1rem;
+            margin-right: 0.5rem;
+        }
+        
+        .form-actions .btn span {
+            white-space: nowrap;
+        }
+        
+        /* Button Loading State */
+        .btn.loading {
+            position: relative;
+            color: transparent !important;
+        }
+        
+        .btn.loading::after {
+            content: "";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            border: 2px solid transparent;
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            animation: button-spin 1s linear infinite;
+        }
+        
+        @keyframes button-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Button Ripple Effect */
+        .btn {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
         }
         
         .alert {
@@ -206,30 +308,289 @@ if ($_POST) {
             background: rgba(255,255,255,0.3);
             transform: translateY(-2px);
         }
+        
+        /* ========================================
+           ADD LAB MOBILE RESPONSIVE IMPROVEMENTS
+           ======================================== */
+        
+        /* Navbar Mobile Improvements */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0.5rem 0;
+            }
+            
+            .navbar .container-fluid {
+                padding-left: 0.8rem;
+                padding-right: 0.8rem;
+            }
+            
+            .navbar-brand {
+                font-size: 1.2rem;
+            }
+            
+            .navbar-brand img {
+                width: 30px !important;
+                height: 30px !important;
+            }
+            
+            .navbar-toggler {
+                border: none;
+                padding: 0.25rem 0.5rem;
+                font-size: 1.1rem;
+            }
+            
+            .navbar-toggler:focus {
+                box-shadow: none;
+            }
+            
+            .navbar-collapse {
+                background: rgba(30, 58, 138, 0.95);
+                border-radius: 10px;
+                margin-top: 0.5rem;
+                padding: 1rem;
+                backdrop-filter: blur(10px);
+            }
+            
+            .navbar-nav .nav-link {
+                padding: 0.6rem 1rem;
+                margin: 0.2rem 0;
+                border-radius: 8px;
+                transition: all 0.3s ease;
+            }
+            
+            .navbar-nav .nav-link:hover {
+                background: rgba(255, 255, 255, 0.1);
+                transform: translateX(5px);
+            }
+            
+            .navbar-nav .nav-link i {
+                width: 20px;
+                text-align: center;
+            }
+            
+            body {
+                padding-top: 70px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .navbar {
+                padding: 0.4rem 0;
+            }
+            
+            .navbar .container-fluid {
+                padding-left: 0.6rem;
+                padding-right: 0.6rem;
+            }
+            
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+            
+            .navbar-brand img {
+                width: 28px !important;
+                height: 28px !important;
+            }
+            
+            .navbar-toggler {
+                font-size: 1rem;
+            }
+            
+            .navbar-collapse {
+                margin-top: 0.4rem;
+                padding: 0.8rem;
+            }
+            
+            .navbar-nav .nav-link {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.9rem;
+            }
+            
+            body {
+                padding-top: 65px;
+            }
+        }
+        
+        /* Main Content Mobile Adjustments */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-top: 1rem;
+                padding: 0 0.5rem;
+            }
+            
+            .stats-card {
+                padding: 1.2rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .stats-card h2 {
+                font-size: 1.4rem;
+            }
+            
+            .stats-card p {
+                font-size: 0.9rem;
+            }
+            
+            .form-card {
+                padding: 1.5rem;
+            }
+            
+            .form-group {
+                margin-bottom: 1.2rem;
+            }
+            
+            .form-label {
+                font-size: 0.95rem;
+            }
+            
+            .form-control, .form-select {
+                padding: 0.6rem 0.8rem;
+                font-size: 0.95rem;
+            }
+            
+            .btn-primary, .btn-secondary {
+                padding: 0.6rem 1.5rem;
+                font-size: 1rem;
+            }
+            
+            .form-actions {
+                margin-top: 1.5rem;
+                padding-top: 1.2rem;
+            }
+            
+            .form-actions .btn {
+                min-height: 45px;
+                font-size: 0.95rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .main-content {
+                margin-top: 0.8rem;
+                padding: 0 0.3rem;
+            }
+            
+            .stats-card {
+                padding: 1rem;
+                margin-bottom: 1.2rem;
+            }
+            
+            .stats-card h2 {
+                font-size: 1.2rem;
+            }
+            
+            .stats-card p {
+                font-size: 0.85rem;
+            }
+            
+            .form-card {
+                padding: 1.2rem;
+            }
+            
+            .form-group {
+                margin-bottom: 1rem;
+            }
+            
+            .form-label {
+                font-size: 0.9rem;
+            }
+            
+            .form-control, .form-select {
+                padding: 0.5rem 0.7rem;
+                font-size: 0.9rem;
+            }
+            
+            .btn-primary, .btn-secondary {
+                padding: 0.5rem 1.2rem;
+                font-size: 0.9rem;
+            }
+            
+            .form-actions {
+                margin-top: 1.2rem;
+                padding-top: 1rem;
+            }
+            
+            .form-actions .btn {
+                min-height: 44px;
+                font-size: 0.9rem;
+                padding: 0.6rem 1rem;
+            }
+            
+            .form-actions .btn i {
+                font-size: 1rem;
+                margin-right: 0.4rem;
+            }
+            
+            .pc-preview {
+                padding: 0.8rem;
+            }
+            
+            .pc-preview h6 {
+                font-size: 0.9rem;
+            }
+            
+            .pc-preview .pc-item {
+                font-size: 0.8rem;
+                padding: 0.4rem;
+                margin: 0.2rem;
+            }
+        }
+        
+        /* Alert Mobile Improvements */
+        @media (max-width: 768px) {
+            .alert {
+                padding: 0.8rem 1.2rem;
+                margin-bottom: 1.2rem;
+                font-size: 0.9rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .alert {
+                padding: 0.6rem 1rem;
+                margin-bottom: 1rem;
+                font-size: 0.85rem;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 100%); border-bottom: 1px solid #e5e7eb;">
         <div class="container-fluid">
-            <a class="navbar-brand" href="dashboard.php">
+            <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
                 <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" style="width: 35px; height: auto; margin-right: 10px;">
                 <div class="brand-text">
                     <div style="font-size: 1.5rem; font-weight: 700; color: #fff;">MyoPC</div>
-                    <div style="font-size: 0.9rem; opacity: 0.9;">Laboratuvar Ekle</div>
+                    <div class="d-none d-md-block" style="font-size: 0.9rem; opacity: 0.9;">Laboratuvar Ekle</div>
+                    <div class="d-block d-md-none" style="font-size: 0.8rem; opacity: 0.9;">Lab Ekle</div>
                 </div>
             </a>
             
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="dashboard.php">
-                    <i class="fas fa-arrow-left me-1"></i>Dashboard'a Dön
-                </a>
-                <a class="nav-link" href="lab_list.php">
-                    <i class="fas fa-building me-1"></i>Laboratuvarlar
-                </a>
-                <a class="nav-link" href="../logout.php">
-                    <i class="fas fa-sign-out-alt me-1"></i>Çıkış Yap
-                </a>
+            <!-- Hamburger Menu Button -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <!-- Collapsible Menu -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link d-flex align-items-center" href="dashboard.php">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        <span class="d-none d-sm-inline">Dashboard'a Dön</span>
+                        <span class="d-inline d-sm-none">Dashboard</span>
+                    </a>
+                    <a class="nav-link d-flex align-items-center" href="lab_list.php">
+                        <i class="fas fa-building me-1"></i>
+                        <span class="d-none d-sm-inline">Laboratuvarlar</span>
+                        <span class="d-inline d-sm-none">Lablar</span>
+                    </a>
+                    <a class="nav-link d-flex align-items-center" href="../logout.php">
+                        <i class="fas fa-sign-out-alt me-1"></i>
+                        <span class="d-none d-sm-inline">Çıkış Yap</span>
+                        <span class="d-inline d-sm-none">Çıkış</span>
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
@@ -327,13 +688,21 @@ if ($_POST) {
                                     <div id="pcList"></div>
                                 </div>
                                 
-                                <div class="d-flex justify-content-between mt-4">
-                                    <a href="dashboard.php" class="btn btn-secondary">
-                                        <i class="fas fa-arrow-left me-2"></i>Geri Dön
-                                    </a>
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-plus me-2"></i>Laboratuvar Oluştur
-                                    </button>
+                                <div class="form-actions mt-4">
+                                    <div class="row g-3">
+                                        <div class="col-12 col-sm-6">
+                                            <a href="dashboard.php" class="btn btn-secondary w-100">
+                                                <i class="fas fa-arrow-left me-2"></i>
+                                                <span>Geri Dön</span>
+                                            </a>
+                                        </div>
+                                        <div class="col-12 col-sm-6">
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                <i class="fas fa-plus me-2"></i>
+                                                <span>Laboratuvar Oluştur</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -344,6 +713,56 @@ if ($_POST) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mobile navbar functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Add lab page loaded');
+            
+            const navbarToggler = document.querySelector('.navbar-toggler');
+            const navbarCollapse = document.querySelector('.navbar-collapse');
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            // Manual navbar toggle functionality
+            if (navbarToggler && navbarCollapse) {
+                navbarToggler.addEventListener('click', function() {
+                    const isExpanded = navbarCollapse.classList.contains('show');
+                    
+                    if (isExpanded) {
+                        navbarCollapse.classList.remove('show');
+                        navbarToggler.setAttribute('aria-expanded', 'false');
+                    } else {
+                        navbarCollapse.classList.add('show');
+                        navbarToggler.setAttribute('aria-expanded', 'true');
+                    }
+                });
+                
+                // Close navbar when clicking outside
+                document.addEventListener('click', function(event) {
+                    const isClickInsideNav = navbarCollapse.contains(event.target) || navbarToggler.contains(event.target);
+                    
+                    if (!isClickInsideNav && navbarCollapse.classList.contains('show')) {
+                        navbarCollapse.classList.remove('show');
+                        navbarToggler.setAttribute('aria-expanded', 'false');
+                    }
+                });
+                
+                // Close navbar when clicking on nav links
+                navLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        navbarCollapse.classList.remove('show');
+                        navbarToggler.setAttribute('aria-expanded', 'false');
+                    });
+                });
+            }
+            
+            // Touch-friendly improvements
+            const buttons = document.querySelectorAll('.btn, .nav-link');
+            buttons.forEach(button => {
+                button.style.minHeight = '44px';
+                button.style.touchAction = 'manipulation';
+            });
+        });
+    </script>
     <script>
         // PC numarası kontrolü
         function checkPcNumber(pcNumber) {
@@ -456,6 +875,7 @@ if ($_POST) {
             const labName = document.getElementById('lab_name').value.trim();
             const pcCount = parseInt(document.getElementById('pc_count').value);
             const userType = document.getElementById('user_type').value;
+            const submitBtn = document.querySelector('button[type="submit"]');
             
             if (!labName) {
                 alert('Laboratuvar adı boş olamaz.');
@@ -483,8 +903,62 @@ if ($_POST) {
             // Onay mesajı
             if (!confirm(`${labName} laboratuvarını oluşturmak istediğinizden emin misiniz?\n\nFormat: ${format}\nKullanıcı Tipi: ${userType}\nPC Sayısı: ${pcCount}`)) {
                 e.preventDefault();
+                return;
             }
+            
+            // Loading state
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            
+            // Simulate loading time (remove this in production)
+            setTimeout(() => {
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+            }, 2000);
         });
+        
+        // Button click effects
+        document.querySelectorAll('.form-actions .btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                // Ripple effect
+                const ripple = document.createElement('span');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+                
+                ripple.style.cssText = `
+                    position: absolute;
+                    width: ${size}px;
+                    height: ${size}px;
+                    left: ${x}px;
+                    top: ${y}px;
+                    background: rgba(255, 255, 255, 0.3);
+                    border-radius: 50%;
+                    transform: scale(0);
+                    animation: ripple 0.6s linear;
+                    pointer-events: none;
+                `;
+                
+                this.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+        
+        // Add ripple animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(4);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>

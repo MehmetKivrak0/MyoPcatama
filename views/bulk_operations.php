@@ -346,30 +346,339 @@ $total_pages = ceil($total / $limit);
             padding: 1.5rem;
             margin-bottom: 2rem;
         }
+        
+        /* ========================================
+           BULK OPERATIONS MOBILE RESPONSIVE IMPROVEMENTS
+           ======================================== */
+        
+        /* Navbar Mobile Improvements */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0.5rem 0;
+            }
+            
+            .navbar .container-fluid {
+                padding-left: 0.8rem;
+                padding-right: 0.8rem;
+            }
+            
+            .navbar-brand {
+                font-size: 1.2rem;
+            }
+            
+            .navbar-brand img {
+                width: 30px !important;
+                height: 30px !important;
+            }
+            
+            .navbar-toggler {
+                border: none;
+                padding: 0.25rem 0.5rem;
+                font-size: 1.1rem;
+            }
+            
+            .navbar-toggler:focus {
+                box-shadow: none;
+            }
+            
+            .navbar-collapse {
+                background: rgba(30, 58, 138, 0.95);
+                border-radius: 10px;
+                margin-top: 0.5rem;
+                padding: 1rem;
+                backdrop-filter: blur(10px);
+            }
+            
+            .navbar-nav .nav-link {
+                padding: 0.6rem 1rem;
+                margin: 0.2rem 0;
+                border-radius: 8px;
+                transition: all 0.3s ease;
+            }
+            
+            .navbar-nav .nav-link:hover {
+                background: rgba(255, 255, 255, 0.1);
+                transform: translateX(5px);
+            }
+            
+            .navbar-nav .nav-link i {
+                width: 20px;
+                text-align: center;
+            }
+            
+            body {
+                padding-top: 70px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .navbar {
+                padding: 0.4rem 0;
+            }
+            
+            .navbar .container-fluid {
+                padding-left: 0.6rem;
+                padding-right: 0.6rem;
+            }
+            
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+            
+            .navbar-brand img {
+                width: 28px !important;
+                height: 28px !important;
+            }
+            
+            .navbar-toggler {
+                font-size: 1rem;
+            }
+            
+            .navbar-collapse {
+                margin-top: 0.4rem;
+                padding: 0.8rem;
+            }
+            
+            .navbar-nav .nav-link {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.9rem;
+            }
+            
+            body {
+                padding-top: 65px;
+            }
+        }
+        
+        /* Main Content Mobile Adjustments */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-top: 1rem;
+                padding: 0 0.5rem;
+            }
+            
+            .stats-card {
+                padding: 1.2rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .stats-card h2 {
+                font-size: 1.4rem;
+            }
+            
+            .stats-card p {
+                font-size: 0.9rem;
+            }
+            
+            .filter-section {
+                padding: 1.2rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .filter-section .form-label {
+                font-size: 0.95rem;
+            }
+            
+            .filter-section .form-control, .filter-section .form-select {
+                padding: 0.6rem 0.8rem;
+                font-size: 0.95rem;
+            }
+            
+            .filter-section .btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .main-content {
+                margin-top: 0.8rem;
+                padding: 0 0.3rem;
+            }
+            
+            .stats-card {
+                padding: 1rem;
+                margin-bottom: 1.2rem;
+            }
+            
+            .stats-card h2 {
+                font-size: 1.2rem;
+            }
+            
+            .stats-card p {
+                font-size: 0.85rem;
+            }
+            
+            .filter-section {
+                padding: 1rem;
+                margin-bottom: 1.2rem;
+            }
+            
+            .filter-section .form-label {
+                font-size: 0.9rem;
+            }
+            
+            .filter-section .form-control, .filter-section .form-select {
+                padding: 0.5rem 0.7rem;
+                font-size: 0.9rem;
+            }
+            
+            .filter-section .btn {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.85rem;
+            }
+            
+            .filter-section .d-flex.gap-2 {
+                flex-direction: column;
+                gap: 0.5rem !important;
+            }
+            
+            .filter-section .d-flex.gap-2 .btn {
+                width: 100%;
+            }
+        }
+        
+        /* Table Mobile Improvements */
+        @media (max-width: 768px) {
+            .table-responsive {
+                font-size: 0.85rem;
+            }
+            
+            .table th, .table td {
+                padding: 0.5rem 0.3rem;
+            }
+            
+            .table th:first-child, .table td:first-child {
+                width: 40px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .table-responsive {
+                font-size: 0.8rem;
+            }
+            
+            .table th, .table td {
+                padding: 0.4rem 0.2rem;
+            }
+            
+            .badge {
+                font-size: 0.7rem;
+            }
+        }
+        
+        /* Pagination Mobile */
+        @media (max-width: 768px) {
+            .pagination {
+                font-size: 0.9rem;
+            }
+            
+            .page-link {
+                padding: 0.5rem 0.75rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .pagination {
+                font-size: 0.8rem;
+            }
+            
+            .page-link {
+                padding: 0.4rem 0.6rem;
+            }
+        }
+        
+        /* Modal Mobile */
+        @media (max-width: 768px) {
+            .modal-dialog {
+                margin: 1rem;
+            }
+            
+            .modal-content {
+                border-radius: 10px;
+            }
+            
+            .modal-header, .modal-body, .modal-footer {
+                padding: 1rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .modal-dialog {
+                margin: 0.5rem;
+            }
+            
+            .modal-header, .modal-body, .modal-footer {
+                padding: 0.8rem;
+            }
+            
+            .modal-title {
+                font-size: 1.1rem;
+            }
+        }
+        
+        /* Toast Mobile */
+        @media (max-width: 768px) {
+            .toast-container {
+                bottom: 1rem;
+                right: 1rem;
+                left: 1rem;
+            }
+            
+            .toast {
+                font-size: 0.9rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .toast-container {
+                bottom: 0.5rem;
+                right: 0.5rem;
+                left: 0.5rem;
+            }
+            
+            .toast {
+                font-size: 0.85rem;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 100%); border-bottom: 1px solid #e5e7eb;">
         <div class="container-fluid">
-            <a class="navbar-brand" href="dashboard.php">
+            <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
                 <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" style="width: 35px; height: auto; margin-right: 10px;">
                 <div class="brand-text">
                     <div style="font-size: 1.5rem; font-weight: 700; color: #fff;">MyoPC</div>
-                    <div style="font-size: 0.9rem; opacity: 0.9;">Toplu İşlemler</div>
+                    <div class="d-none d-md-block" style="font-size: 0.9rem; opacity: 0.9;">Toplu İşlemler</div>
+                    <div class="d-block d-md-none" style="font-size: 0.8rem; opacity: 0.9;">Toplu İşlem</div>
                 </div>
             </a>
             
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="dashboard.php">
-                    <i class="fas fa-arrow-left me-1"></i>Dashboard'a Dön
-                </a>
-                <a class="nav-link" href="student_management.php">
-                    <i class="fas fa-users me-1"></i>Öğrenci Yönetimi
-                </a>
-                <a class="nav-link" href="../logout.php">
-                    <i class="fas fa-sign-out-alt me-1"></i>Çıkış Yap
-                </a>
+            <!-- Hamburger Menu Button -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <!-- Collapsible Menu -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link d-flex align-items-center" href="dashboard.php">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        <span class="d-none d-sm-inline">Dashboard'a Dön</span>
+                        <span class="d-inline d-sm-none">Dashboard</span>
+                    </a>
+                    <a class="nav-link d-flex align-items-center" href="student_management.php">
+                        <i class="fas fa-users me-1"></i>
+                        <span class="d-none d-sm-inline">Öğrenci Yönetimi</span>
+                        <span class="d-inline d-sm-none">Öğrenciler</span>
+                    </a>
+                    <a class="nav-link d-flex align-items-center" href="../logout.php">
+                        <i class="fas fa-sign-out-alt me-1"></i>
+                        <span class="d-none d-sm-inline">Çıkış Yap</span>
+                        <span class="d-inline d-sm-none">Çıkış</span>
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
@@ -619,9 +928,58 @@ $total_pages = ceil($total / $limit);
 
         // Sayfa yüklendiğinde
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('Bulk operations page loaded');
             initializeEventListeners();
             updateSelectedCount();
+            initializeMobileNavbar();
         });
+        
+        // Mobile navbar functionality
+        function initializeMobileNavbar() {
+            const navbarToggler = document.querySelector('.navbar-toggler');
+            const navbarCollapse = document.querySelector('.navbar-collapse');
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            // Manual navbar toggle functionality
+            if (navbarToggler && navbarCollapse) {
+                navbarToggler.addEventListener('click', function() {
+                    const isExpanded = navbarCollapse.classList.contains('show');
+                    
+                    if (isExpanded) {
+                        navbarCollapse.classList.remove('show');
+                        navbarToggler.setAttribute('aria-expanded', 'false');
+                    } else {
+                        navbarCollapse.classList.add('show');
+                        navbarToggler.setAttribute('aria-expanded', 'true');
+                    }
+                });
+                
+                // Close navbar when clicking outside
+                document.addEventListener('click', function(event) {
+                    const isClickInsideNav = navbarCollapse.contains(event.target) || navbarToggler.contains(event.target);
+                    
+                    if (!isClickInsideNav && navbarCollapse.classList.contains('show')) {
+                        navbarCollapse.classList.remove('show');
+                        navbarToggler.setAttribute('aria-expanded', 'false');
+                    }
+                });
+                
+                // Close navbar when clicking on nav links
+                navLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        navbarCollapse.classList.remove('show');
+                        navbarToggler.setAttribute('aria-expanded', 'false');
+                    });
+                });
+            }
+            
+            // Touch-friendly improvements
+            const buttons = document.querySelectorAll('.btn, .nav-link, .form-check-input');
+            buttons.forEach(button => {
+                button.style.minHeight = '44px';
+                button.style.touchAction = 'manipulation';
+            });
+        }
 
         function initializeEventListeners() {
             

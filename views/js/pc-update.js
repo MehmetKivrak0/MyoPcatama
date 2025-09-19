@@ -180,8 +180,9 @@ class PCUpdateManager {
         }
 
         const pcCardsHTML = pcs.map(pc => {
-            const isOccupied = pc.student_id && pc.student_id !== null;
-            const studentCount = pc.student_count || 0;
+            const isOccupied = pc.is_occupied && pc.students && pc.students.length > 0;
+            const studentCount = pc.students ? pc.students.length : 0;
+            const firstStudent = pc.students && pc.students.length > 0 ? pc.students[0] : null;
             
             return `
                 <div class="col-md-6 col-lg-4 mb-3">
@@ -200,17 +201,23 @@ class PCUpdateManager {
                                 <div class="student-info">
                                     <div class="d-flex align-items-center mb-2">
                                         <i class="fas fa-user text-primary me-2"></i>
-                                        <small class="text-dark fw-medium">${pc.full_name || 'Öğrenci'}</small>
+                                        <small class="text-dark fw-medium">${firstStudent ? firstStudent.full_name : 'Öğrenci'}</small>
                                     </div>
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-id-card text-secondary me-2"></i>
-                                        <small class="text-muted">${pc.sdt_nmbr || 'Numara'}</small>
+                                        <small class="text-muted">${firstStudent ? firstStudent.sdt_nmbr : 'Numara'}</small>
                                     </div>
+                                    ${studentCount > 1 ? `
+                                        <div class="d-flex align-items-center mt-1">
+                                            <i class="fas fa-users text-info me-2"></i>
+                                            <small class="text-info">+${studentCount - 1} öğrenci daha</small>
+                                        </div>
+                                    ` : ''}
                                 </div>
                             ` : `
                                 <div class="text-center text-muted py-2">
-                                    <i class="fas fa-plus-circle fa-2x mb-2 text-success"></i>
-                                    <div class="small">Öğrenci atanabilir</div>
+                                    <i class="fas fa-user-slash fa-2x mb-2 text-muted"></i>
+                                    <div class="small">Öğrenci yok</div>
                                 </div>
                             `}
                         </div>

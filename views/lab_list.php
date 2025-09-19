@@ -76,6 +76,520 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <link href="css/dashboard.css?v=<?php echo time(); ?>" rel="stylesheet">
     <!-- Custom Lab List CSS -->
     <link href="css/lab_list.css?v=<?php echo time(); ?>" rel="stylesheet">
+    
+    <style>
+        /* ========================================
+           LAB LIST MOBILE RESPONSIVE IMPROVEMENTS
+           ======================================== */
+        
+        /* Top Header Bar Mobile Improvements */
+        @media (max-width: 768px) {
+            .top-header-bar {
+                padding: 1rem 0;
+                min-height: auto;
+            }
+            
+            .top-header-bar .container-fluid {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            .top-header-bar .row {
+                align-items: center;
+                gap: 1rem;
+            }
+            
+            /* Logo Section */
+            .logo-section {
+                margin-bottom: 0;
+                justify-content: flex-start;
+                order: 1;
+            }
+            
+            .logo-section .header-logo {
+                width: 40px !important;
+                height: 40px !important;
+            }
+            
+            .brand-name {
+                font-size: 1.5rem !important;
+                font-weight: 700;
+                margin-bottom: 0.2rem;
+            }
+            
+            .brand-subtitle {
+                font-size: 0.9rem !important;
+                opacity: 0.9;
+                margin: 0;
+            }
+            
+            /* Stats Section */
+            .header-stats {
+                flex-direction: row;
+                gap: 0.6rem;
+                margin-bottom: 0;
+                justify-content: center;
+                order: 2;
+                flex: 1;
+                max-width: 400px;
+                margin: 0 auto;
+            }
+            
+            .header-stat-item {
+                padding: 0.6rem 0.8rem;
+                font-size: 0.8rem;
+                min-width: 90px;
+                justify-content: center;
+                flex: 1;
+                max-width: 110px;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.15);
+                backdrop-filter: blur(15px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
+            }
+            
+            .header-stat-item:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            }
+            
+            .header-stat-item i {
+                font-size: 1.1rem;
+                margin-bottom: 0.3rem;
+                display: block;
+                text-align: center;
+            }
+            
+            .header-stat-item .stat-number {
+                font-size: 1.3rem;
+                font-weight: 700;
+                display: block;
+                margin-bottom: 0.2rem;
+                text-align: center;
+                color: #fff;
+            }
+            
+            .header-stat-item .stat-label {
+                font-size: 0.7rem;
+                opacity: 0.9;
+                text-align: center;
+                font-weight: 500;
+                line-height: 1.2;
+            }
+            
+            /* Action Buttons */
+            .header-actions {
+                flex-direction: row;
+                gap: 0.6rem;
+                align-items: center;
+                justify-content: flex-end;
+                order: 3;
+            }
+            
+            .header-btn {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.85rem;
+                min-width: 110px;
+                justify-content: center;
+                border-radius: 10px;
+                font-weight: 600;
+                transition: all 0.3s ease;
+                box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            }
+            
+            .header-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            }
+            
+            .header-btn i {
+                font-size: 0.9rem;
+                margin-right: 0.4rem;
+            }
+            
+            body {
+                padding-top: 120px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .top-header-bar {
+                padding: 0.8rem 0;
+            }
+            
+            .top-header-bar .container-fluid {
+                padding-left: 0.8rem;
+                padding-right: 0.8rem;
+            }
+            
+            .top-header-bar .row {
+                gap: 0.8rem;
+            }
+            
+            .logo-section {
+                margin-bottom: 0;
+            }
+            
+            .logo-section .header-logo {
+                width: 35px !important;
+                height: 35px !important;
+            }
+            
+            .brand-name {
+                font-size: 1.3rem !important;
+            }
+            
+            .brand-subtitle {
+                font-size: 0.8rem !important;
+            }
+            
+            .header-stats {
+                gap: 0.4rem;
+                margin-bottom: 0;
+                max-width: 350px;
+            }
+            
+            .header-stat-item {
+                padding: 0.5rem 0.6rem;
+                font-size: 0.75rem;
+                min-width: 75px;
+                max-width: 95px;
+                border-radius: 10px;
+            }
+            
+            .header-stat-item i {
+                font-size: 1rem;
+                margin-bottom: 0.2rem;
+            }
+            
+            .header-stat-item .stat-number {
+                font-size: 1.2rem;
+            }
+            
+            .header-stat-item .stat-label {
+                font-size: 0.65rem;
+            }
+            
+            .header-actions {
+                gap: 0.5rem;
+            }
+            
+            .header-btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.8rem;
+                min-width: 100px;
+                border-radius: 8px;
+            }
+            
+            .header-btn i {
+                font-size: 0.85rem;
+                margin-right: 0.3rem;
+            }
+            
+            body {
+                padding-top: 110px;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            .top-header-bar {
+                padding: 0.6rem 0;
+            }
+            
+            .top-header-bar .container-fluid {
+                padding-left: 0.6rem;
+                padding-right: 0.6rem;
+            }
+            
+            .top-header-bar .row {
+                gap: 0.6rem;
+            }
+            
+            .logo-section {
+                margin-bottom: 0;
+            }
+            
+            .logo-section .header-logo {
+                width: 32px !important;
+                height: 32px !important;
+            }
+            
+            .brand-name {
+                font-size: 1.2rem !important;
+            }
+            
+            .brand-subtitle {
+                font-size: 0.75rem !important;
+            }
+            
+            .header-stats {
+                gap: 0.3rem;
+                margin-bottom: 0;
+                max-width: 300px;
+            }
+            
+            .header-stat-item {
+                padding: 0.4rem 0.5rem;
+                font-size: 0.7rem;
+                min-width: 65px;
+                max-width: 80px;
+                border-radius: 8px;
+            }
+            
+            .header-stat-item i {
+                font-size: 0.9rem;
+                margin-bottom: 0.15rem;
+            }
+            
+            .header-stat-item .stat-number {
+                font-size: 1.1rem;
+            }
+            
+            .header-stat-item .stat-label {
+                font-size: 0.6rem;
+            }
+            
+            .header-actions {
+                gap: 0.4rem;
+            }
+            
+            .header-btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.75rem;
+                min-width: 90px;
+                border-radius: 6px;
+            }
+            
+            .header-btn i {
+                font-size: 0.8rem;
+                margin-right: 0.25rem;
+            }
+            
+            body {
+                padding-top: 100px;
+            }
+        }
+        
+        /* Main Content Mobile Adjustments */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1rem 0.5rem;
+            }
+            
+            .container {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            
+            .labs-section {
+                margin-top: 1rem;
+            }
+            
+            .glass-card {
+                padding: 1rem;
+                border-radius: 15px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .main-content {
+                padding: 0.8rem 0.3rem;
+            }
+            
+            .container {
+                padding-left: 0.3rem;
+                padding-right: 0.3rem;
+            }
+            
+            .labs-section {
+                margin-top: 0.8rem;
+            }
+            
+            .glass-card {
+                padding: 0.8rem;
+                border-radius: 12px;
+            }
+        }
+        
+        /* Table Mobile Improvements */
+        @media (max-width: 768px) {
+            .labs-table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .labs-table {
+                min-width: 600px;
+            }
+            
+            .labs-table th,
+            .labs-table td {
+                padding: 0.5rem 0.3rem;
+                font-size: 0.8rem;
+            }
+            
+            .labs-table th:first-child,
+            .labs-table td:first-child {
+                width: 40px;
+            }
+            
+            .labs-table th:last-child,
+            .labs-table td:last-child {
+                width: 80px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .labs-table {
+                min-width: 500px;
+            }
+            
+            .labs-table th,
+            .labs-table td {
+                padding: 0.4rem 0.2rem;
+                font-size: 0.75rem;
+            }
+            
+            .lab-name {
+                max-width: 120px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            
+            .pc-count-control {
+                display: flex;
+                align-items: center;
+                gap: 0.2rem;
+            }
+            
+            .pc-count-input {
+                width: 50px;
+                font-size: 0.7rem;
+                padding: 0.2rem;
+            }
+            
+            .btn-icon {
+                width: 24px;
+                height: 24px;
+                font-size: 0.7rem;
+            }
+        }
+        
+        /* Empty State Mobile */
+        @media (max-width: 768px) {
+            .empty-state {
+                padding: 2rem 1rem;
+                text-align: center;
+            }
+            
+            .empty-icon i {
+                font-size: 3rem;
+            }
+            
+            .empty-title {
+                font-size: 1.2rem;
+                margin: 1rem 0 0.5rem 0;
+            }
+            
+            .empty-subtitle {
+                font-size: 0.9rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .modern-btn {
+                padding: 0.8rem 1.5rem;
+                font-size: 0.9rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .empty-state {
+                padding: 1.5rem 0.8rem;
+            }
+            
+            .empty-icon i {
+                font-size: 2.5rem;
+            }
+            
+            .empty-title {
+                font-size: 1.1rem;
+            }
+            
+            .empty-subtitle {
+                font-size: 0.8rem;
+            }
+            
+            .modern-btn {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.8rem;
+            }
+        }
+        
+        /* Alert Mobile Improvements */
+        @media (max-width: 768px) {
+            .modern-alert {
+                margin: 0.5rem;
+                border-radius: 8px;
+            }
+            
+            .alert-content {
+                padding: 0.8rem;
+                font-size: 0.9rem;
+            }
+            
+            .alert-content i {
+                font-size: 1rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .modern-alert {
+                margin: 0.3rem;
+                border-radius: 6px;
+            }
+            
+            .alert-content {
+                padding: 0.6rem;
+                font-size: 0.8rem;
+            }
+            
+            .alert-content i {
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Loading Overlay Mobile */
+        @media (max-width: 768px) {
+            .loading-overlay {
+                padding: 1rem;
+            }
+            
+            .loading-spinner {
+                font-size: 0.9rem;
+            }
+            
+            .loading-spinner i {
+                font-size: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .loading-overlay {
+                padding: 0.8rem;
+            }
+            
+            .loading-spinner {
+                font-size: 0.8rem;
+            }
+            
+            .loading-spinner i {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Top Header Bar -->
@@ -83,19 +597,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <div class="container-fluid">
             <div class="row align-items-center">
                 <!-- Logo and Title -->
-                <div class="col-md-3">
+                <div class="col-12 col-md-3">
                     <div class="logo-section d-flex align-items-center">
                         <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" class="header-logo">
                         <div class="logo-text">
                             <div class="brand-name">MyOPC</div>
-                            <div class="brand-subtitle">Laboratuvar Listesi</div>
+                            <div class="brand-subtitle d-none d-md-block">Laboratuvar Listesi</div>
+                            <div class="brand-subtitle d-block d-md-none">Lab Listesi</div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Stats Section -->
-                <div class="col-md-6">
-                    <div class="header-stats d-flex justify-content-between">
+                <div class="col-12 col-md-6">
+                    <div class="header-stats d-flex justify-content-center justify-content-md-between">
                         <div class="header-stat-item">
                             <i class="fas fa-building"></i>
                             <span class="stat-number"><?php echo count($labs); ?></span>
@@ -115,15 +630,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 </div>
                 
                 <!-- Action Buttons -->
-                <div class="col-md-3">
-                    <div class="header-actions d-flex justify-content-end align-items-center">
+                <div class="col-12 col-md-3">
+                    <div class="header-actions d-flex justify-content-center justify-content-md-end align-items-center">
                         <a href="dashboard.php" class="header-btn dashboard-btn">
                             <i class="fas fa-tachometer-alt"></i>
-                            Dashboard
+                            <span class="d-none d-sm-inline">Dashboard</span>
+                            <span class="d-inline d-sm-none">Ana Sayfa</span>
                         </a>
                         <a href="../logout.php" class="header-btn logout-btn">
                             <i class="fas fa-sign-out-alt"></i>
-                            Çıkış Yap
+                            <span class="d-none d-sm-inline">Çıkış Yap</span>
+                            <span class="d-inline d-sm-none">Çıkış</span>
                         </a>
                     </div>
                 </div>
@@ -255,6 +772,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // Mobile responsive functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Lab list page loaded');
+            
+            // Mobile table scroll indicator
+            const tableContainer = document.querySelector('.labs-table-container');
+            if (tableContainer) {
+                // Add scroll indicator for mobile
+                if (window.innerWidth <= 768) {
+                    tableContainer.style.position = 'relative';
+                    
+                    // Add scroll hint
+                    const scrollHint = document.createElement('div');
+                    scrollHint.className = 'scroll-hint';
+                    scrollHint.innerHTML = '<i class="fas fa-arrows-alt-h"></i> Kaydırarak tüm sütunları görebilirsiniz';
+                    scrollHint.style.cssText = `
+                        position: absolute;
+                        top: 10px;
+                        right: 10px;
+                        background: rgba(30, 58, 95, 0.9);
+                        color: white;
+                        padding: 0.3rem 0.6rem;
+                        border-radius: 15px;
+                        font-size: 0.7rem;
+                        z-index: 10;
+                        animation: fadeInOut 3s ease-in-out;
+                    `;
+                    
+                    tableContainer.appendChild(scrollHint);
+                    
+                    // Remove hint after 3 seconds
+                    setTimeout(() => {
+                        if (scrollHint.parentNode) {
+                            scrollHint.parentNode.removeChild(scrollHint);
+                        }
+                    }, 3000);
+                }
+            }
+            
+            // Touch-friendly button improvements
+            const actionButtons = document.querySelectorAll('.btn-icon, .header-btn');
+            actionButtons.forEach(button => {
+                button.style.minHeight = '44px';
+                button.style.minWidth = '44px';
+                button.style.touchAction = 'manipulation';
+            });
+        });
+        
+        // Add CSS for scroll hint animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeInOut {
+                0% { opacity: 0; transform: translateY(-10px); }
+                20% { opacity: 1; transform: translateY(0); }
+                80% { opacity: 1; transform: translateY(0); }
+                100% { opacity: 0; transform: translateY(-10px); }
+            }
+            
+            .scroll-hint {
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            }
+        `;
+        document.head.appendChild(style);
+        
         document.addEventListener('DOMContentLoaded', function() {
             // PC sayısı güncelleme
             document.querySelectorAll('.update-pc-btn').forEach(button => {
