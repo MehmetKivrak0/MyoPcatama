@@ -333,13 +333,13 @@ function displayPCCards(pcs, labName, labId) {
                 <div class="pc-card-body">
                     ${studentInfo}
                     ${!isOccupied ? '<div class="empty-pc"><i class="fas fa-plus-circle"></i><span>Öğrenci Atanabilir</span></div>' : ''}
-                </div>
-                <div class="pc-card-actions">
-                    <button class="action-btn update-btn" onclick="openPCUpdate(window.currentLabId, window.currentLabName)" title="PC Güncelle">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    ${isOccupied ? `<button class="action-btn view-btn" onclick="viewPCDetails(${pcId}, '${pcNumber}')" title="PC Detayları"><i class="fas fa-eye"></i></button>` : ''}
-                    <button class="action-btn assign-btn" onclick="assignStudent(${pcId}, '${pcNumber}')" title="Öğrenci Ata"><i class="fas fa-user-plus"></i></button>
+                    <div class="pc-card-actions">
+                        <button class="action-btn update-btn" onclick="openPCUpdate(window.currentLabId, window.currentLabName)" title="PC Güncelle">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        ${isOccupied ? `<button class="action-btn view-btn" onclick="viewPCDetails(${pcId}, '${pcNumber}')" title="PC Detayları"><i class="fas fa-eye"></i></button>` : ''}
+                        <button class="action-btn assign-btn" onclick="assignStudent(${pcId}, '${pcNumber}')" title="Öğrenci Ata"><i class="fas fa-user-plus"></i></button>
+                    </div>
                 </div>
             </div>
         `;
