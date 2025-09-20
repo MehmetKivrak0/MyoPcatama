@@ -46,7 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $form_data = [
             'sdt_nmbr' => trim($_POST['sdt_nmbr'] ?? ''),
             'full_name' => trim($_POST['full_name'] ?? ''),
-            'academic_year' => intval($_POST['academic_year'] ?? date('Y'))
+            'academic_year' => intval($_POST['academic_year'] ?? date('Y')),
+            'department' => trim($_POST['department'] ?? ''),
+            'class_level' => trim($_POST['class_level'] ?? '')
         ];
         
         // Validasyon
@@ -309,6 +311,32 @@ unset($_SESSION['error_message'], $_SESSION['success_message']);
                                        value="<?php echo htmlspecialchars($student_data['full_name'] ?? ''); ?>"
                                        placeholder="Örn: Ahmet Yılmaz"
                                        required>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="department" class="form-label">
+                                        Bölüm
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="department" 
+                                           name="department" 
+                                           value="<?php echo htmlspecialchars($student_data['department'] ?? ''); ?>"
+                                           placeholder="Örn: Bilgisayar Programcılığı">
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="class_level" class="form-label">
+                                        Sınıf Durumu
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="class_level" 
+                                           name="class_level" 
+                                           value="<?php echo htmlspecialchars($student_data['class_level'] ?? ''); ?>"
+                                           placeholder="Örn: 1. Sınıf">
+                                </div>
                             </div>
                             
                             <div class="d-flex gap-3 justify-content-end">

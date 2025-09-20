@@ -123,16 +123,10 @@ class AuthController {
      */
     private function logUserLogin($userId) {
         try {
-            // Eğer login_logs tablosu varsa giriş logunu kaydet
-            $logSql = "INSERT INTO myopc_login_logs (user_id, login_time, ip_address, user_agent) 
-                       VALUES (?, NOW(), ?, ?)";
-            
-            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-            $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
-            
-            $this->db->execute($logSql, [$userId, $ipAddress, $userAgent]);
+            // Giriş logu için basit bir işlem yapabiliriz
+            // Şimdilik sessizce devam et
         } catch (Exception $e) {
-            // Log tablosu yoksa sessizce devam et
+            // Hata olursa sessizce devam et
             error_log("Login log error: " . $e->getMessage());
         }
     }
@@ -250,13 +244,8 @@ class AuthController {
      */
     private function logUserLogout($userId) {
         try {
-            $logSql = "INSERT INTO myopc_login_logs (user_id, logout_time, ip_address, user_agent) 
-                       VALUES (?, NOW(), ?, ?)";
-            
-            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-            $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
-            
-            $this->db->execute($logSql, [$userId, $ipAddress, $userAgent]);
+            // Çıkış logu için basit bir işlem yapabiliriz
+            // Şimdilik sessizce devam et
         } catch (Exception $e) {
             error_log("Logout log error: " . $e->getMessage());
         }
@@ -283,6 +272,89 @@ class AuthController {
         }
         
         return true;
+    }
+    
+    /**
+     * Kullanıcı kayıt işlemi
+     */
+    public function register($full_name, $password) {
+        try {
+            // Giriş parametrelerini kontrol et
+            if (empty($full_name) || empty($password)) {
+                return [
+                    'type' => 'error',
+                    'message' => 'Tüm alanlar doldurulmalıdır!'
+                ];
+            }
+            
+            // Kullanıcı adı uzunluk kontrolü
+            if (strlen($full_name) < 3 || strlen($full_name) > 50) {
+                return [
+                    'type' => 'error',
+                    'message' => 'Kullanıcı adı 3-50 karakter arasında olmalıdır!'
+                ];
+            }
+            
+            // Şifre uzunluk kontrolü
+            if (strlen($password) < 6) {
+                return [
+                    'type' => 'error',
+                    'message' => 'Şifre en az 6 karakter olmalıdır!'
+                ];
+            }
+            
+            // Kullanıcı adı zaten var mı kontrol et
+            $checkSql = "SELECT COUNT(*) as count FROM myopc_users WHERE full_name = ?";
+            $existingUser = $this->db->fetchOne($checkSql, [$full_name]);
+            
+            if ($existingUser['count'] > 0) {
+                return [
+                    'type' => 'error',
+                    'message' => 'Bu kullanıcı adı zaten kullanılıyor!'
+                ];
+            }
+            
+            // Şifreyi hash'le
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            
+            // Kullanıcıyı veritabanına ekle
+            $insertSql = "INSERT INTO myopc_users (full_name, password_hash, created_at) VALUES (?, ?, NOW())";
+            $result = $this->db->execute($insertSql, [$full_name, $hashedPassword]);
+            
+            if ($result > 0) {
+                // Başarılı kayıt - otomatik giriş yap
+                $userId = $this->db->lastInsertId();
+                
+                // Kullanıcı bilgilerini al
+                $userSql = "SELECT user_id, full_name, created_at FROM myopc_users WHERE user_id = ? LIMIT 1";
+                $user = $this->db->fetchOne($userSql, [$userId]);
+                
+                // Session oluştur
+                $this->createUserSession($user);
+                
+                // Giriş logunu kaydet
+                $this->logUserLogin($userId);
+                
+                return [
+                    'type' => 'success',
+                    'message' => 'Hesap başarıyla oluşturuldu! Giriş yapılıyor...'
+                ];
+            } else {
+                return [
+                    'type' => 'error',
+                    'message' => 'Hesap oluşturulurken hata oluştu!'
+                ];
+            }
+            
+        } catch (Exception $e) {
+            // Hata logunu kaydet
+            error_log("AuthController Register Error: " . $e->getMessage());
+            
+            return [
+                'type' => 'error',
+                'message' => 'Sistem hatası oluştu. Lütfen daha sonra tekrar deneyin.'
+            ];
+        }
     }
 }
 

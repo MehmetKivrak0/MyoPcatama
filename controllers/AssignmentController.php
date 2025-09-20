@@ -1,5 +1,10 @@
 <?php
 
+// Cache kontrolü - okul sunucusu için
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 require_once '../config/db.php';
 require_once '../models/Assignment.php';
 require_once '../models/Student.php';
@@ -83,13 +88,23 @@ class AssignmentController {
 
             // PC'deki mevcut öğrenci sayısını kontrol et
             $currentStudentCount = $this->assignmentModel->getPCStudentCount($pcId);
-            $maxStudentsPerPC = 4; // Maksimum öğrenci sayısı
+            
+            // Maksimum öğrenci sayısını veritabanından al
+            $maxStudentsPerPC = $this->labModel->getMaxStudentsPerPC($computerId);
 
             if ($currentStudentCount >= $maxStudentsPerPC) {
-                throw new Exception("Bu PC'ye maksimum $maxStudentsPerPC öğrenci atanabilir. Şu anda $currentStudentCount öğrenci atanmış durumda.");
+                throw new Exception("PC $pcId'ye maksimum $maxStudentsPerPC öğrenci atanabilir. $currentStudentCount öğrenci atamaya çalışıyorsunuz.");
             }
 
-            // Öğrenci ataması yap
+            // Öğrencinin bu laboratuvarda zaten atanıp atanmadığını kontrol et
+            $existingAssignmentInLab = $this->assignmentModel->isStudentAssignedToLab($studentId, $computerId);
+            if ($existingAssignmentInLab) {
+                // Hangi PC'ye atanmış olduğunu bul
+                $existingPcNumber = $existingAssignmentInLab % 100;
+                throw new Exception("Bu öğrenci zaten bu laboratuvarda PC{$existingPcNumber}'ye atanmış. Aynı laboratuvarda bir öğrenci sadece bir PC'ye atanabilir.");
+            }
+
+            // Öğrenci ataması yap (çoklu atama destekli)
             $result = $this->assignmentModel->assignStudent($studentId, $pcId, $computerId);
 
             if ($result) {
@@ -229,7 +244,9 @@ class AssignmentController {
             // Her atamayı tek tek yap
             $successCount = 0;
             $errorCount = 0;
-            $maxStudentsPerPC = 4; // Maksimum öğrenci sayısı
+            
+            // Maksimum öğrenci sayısını veritabanından al
+            $maxStudentsPerPC = $this->labModel->getMaxStudentsPerPC($computerId);
 
             // PC'ye göre grupla ve sınır kontrolü yap
             $pcStudentCounts = [];
@@ -541,31 +558,57 @@ class AssignmentController {
             $computerId = $_GET['computer_id'] ?? null;
             $pcId = $_GET['pc_id'] ?? null;
             $maxStudentsPerCard = $_GET['max_students'] ?? 5;
+            
+            // Filtreleme parametreleri
+            $search = $_GET['search'] ?? '';
+            $year = $_GET['year'] ?? '';
+            $department = $_GET['department'] ?? '';
 
             if (!$computerId || !$pcId) {
                 throw new Exception("Gerekli parametreler eksik");
             }
 
-            // Tüm öğrencileri getir
-            $allStudents = $this->assignmentModel->getAllStudents();
+            // Öğrencileri filtreleme ile getir
+            require_once '../models/Student.php';
+            $db = \Database::getInstance();
+            $studentModel = new \Student($db);
+            $allStudents = $studentModel->getStudentsPaginated(0, 1000, $year, $search, $department);
 
             // Her öğrencinin atama durumunu kontrol et
             $studentsWithAssignmentStatus = [];
             foreach ($allStudents as $student) {
-                $isAssigned = $this->assignmentModel->isStudentAssigned($student['student_id'], $computerId);
+                // Bu laboratuvarda atanmış mı kontrol et
+                $isAssignedToCurrentLab = $this->assignmentModel->isStudentAssignedToLabBoolean($student['student_id'], $computerId);
+                
+                // Bu PC'ye atanmış mı kontrol et
+                $isAssignedToCurrentPC = $this->assignmentModel->isStudentAssignedToPC($student['student_id'], $pcId);
+                
+                // Öğrenci atanabilir mi kontrol et:
+                // Sadece bu laboratuvarda atanmamış olmalı (diğer lablar etkilemez)
+                $canBeAssigned = !$isAssignedToCurrentLab;
+                
+                // Debug log
+                error_log("DEBUG STUDENT FILTER - Öğrenci: {$student['full_name']} (ID: {$student['student_id']}) - Lab: $computerId, PC: $pcId - CurrentLab: " . ($isAssignedToCurrentLab ? 'YES' : 'NO') . " - CurrentPC: " . ($isAssignedToCurrentPC ? 'YES' : 'NO') . " - CanAssign: " . ($canBeAssigned ? 'YES' : 'NO'));
+                
                 $studentsWithAssignmentStatus[] = [
                     'student_id' => $student['student_id'],
                     'full_name' => $student['full_name'],
                     'sdt_nmbr' => $student['sdt_nmbr'],
                     'academic_year' => $student['academic_year'],
-                    'is_assigned' => $isAssigned !== false
+                    'is_assigned_to_current_lab' => $isAssignedToCurrentLab !== false,
+                    'is_assigned_to_current_pc' => $isAssignedToCurrentPC,
+                    'can_be_assigned' => $canBeAssigned
                 ];
             }
 
+            // Maksimum öğrenci sayısını veritabanından al
+            $maxStudentsPerPC = $this->labModel->getMaxStudentsPerPC($computerId);
+            
             $this->sendJsonResponse([
                 'success' => true,
                 'students' => $studentsWithAssignmentStatus,
-                'maxStudentsPerCard' => (int)$maxStudentsPerCard,
+                'maxStudentsPerCard' => $maxStudentsPerPC,
+                'maxStudentsPerPC' => $maxStudentsPerPC,
                 'totalStudents' => count($studentsWithAssignmentStatus)
             ]);
 
@@ -606,11 +649,15 @@ class AssignmentController {
 
             // PC'leri ve atamalarını al
             $pcs = $this->assignmentModel->getLabPCsWithAssignments($computerId);
+            
+            // Maksimum öğrenci sayısını al
+            $maxStudentsPerPC = $this->labModel->getMaxStudentsPerPC($computerId);
 
             $this->sendJsonResponse([
                 'success' => true,
                 'pcs' => $pcs,
-                'lab_info' => $labInfo
+                'lab_info' => $labInfo,
+                'maxStudentsPerPC' => $maxStudentsPerPC
             ]);
 
         } catch (Exception $e) {
@@ -1042,14 +1089,17 @@ class AssignmentController {
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setTitle('Atamalar');
 
-            // Başlık satırı
+            // Başlık satırı - Template formatına uygun
             $headers = [
-                'A' => 'Atama ID',
-                'B' => 'Öğrenci Adı Soyadı',
-                'C' => 'Okul Numarası',
+                'A' => 'Öğrenci No',
+                'B' => 'Ad',
+                'C' => 'Soyad',
                 'D' => 'Akademik Yıl',
-                'E' => 'Laboratuvar Adı',
-                'F' => 'PC Numarası'
+                'E' => 'Bölüm',
+                'F' => 'Sınıf Durumu',
+                'G' => 'Laboratuvar Adı',
+                'H' => 'PC Numarası',
+                'I' => 'Atama Tarihi'
             ];
 
             // Başlıkları yaz
@@ -1079,28 +1129,39 @@ class AssignmentController {
                 ]
             ];
 
-            $sheet->getStyle('A1:D1')->applyFromArray($headerStyle);
+            $sheet->getStyle('A1:I1')->applyFromArray($headerStyle);
 
-            // Verileri yaz
+            // Verileri yaz - Template formatına uygun
             $row = 2;
             foreach ($assignments as $assignment) {
-                $sheet->setCellValue('A' . $row, $assignment['assignment_id']);
-                $sheet->setCellValue('B' . $row, $assignment['full_name']);
-                $sheet->setCellValue('C' . $row, $assignment['sdt_nmbr']);
-                $sheet->setCellValue('D' . $row, $assignment['academic_year']);
-                $sheet->setCellValue('E' . $row, $assignment['lab_name']);
+                // Ad ve soyadı ayır
+                $nameParts = explode(' ', $assignment['full_name'], 2);
+                $firstName = $nameParts[0] ?? '';
+                $lastName = $nameParts[1] ?? '';
+                
+                $sheet->setCellValue('A' . $row, $assignment['sdt_nmbr']); // Öğrenci No
+                $sheet->setCellValue('B' . $row, $firstName); // Ad
+                $sheet->setCellValue('C' . $row, $lastName); // Soyad
+                $sheet->setCellValue('D' . $row, $assignment['academic_year']); // Akademik Yıl
+                $sheet->setCellValue('E' . $row, $assignment['department'] ?? 'N/A'); // Bölüm
+                $sheet->setCellValue('F' . $row, $assignment['class_level'] ?? 'N/A'); // Sınıf Durumu
+                $sheet->setCellValue('G' . $row, $assignment['lab_name']); // Laboratuvar Adı
                 $pcNumber = $assignment['pc_number'] ?? 0;
-                $sheet->setCellValue('F' . $row, 'PC' . str_pad($pcNumber, 2, '0', STR_PAD_LEFT));
+                $sheet->setCellValue('H' . $row, 'PC' . str_pad($pcNumber, 2, '0', STR_PAD_LEFT)); // PC Numarası
+                $sheet->setCellValue('I' . $row, $assignment['created_at'] ?? date('Y-m-d H:i:s')); // Atama Tarihi
                 $row++;
             }
 
-            // Sütun genişliklerini ayarla
-            $sheet->getColumnDimension('A')->setWidth(12);
-            $sheet->getColumnDimension('B')->setWidth(25);
-            $sheet->getColumnDimension('C')->setWidth(15);
-            $sheet->getColumnDimension('D')->setWidth(12);
-            $sheet->getColumnDimension('E')->setWidth(25);
-            $sheet->getColumnDimension('F')->setWidth(12);
+            // Sütun genişliklerini ayarla - Template formatına uygun
+            $sheet->getColumnDimension('A')->setWidth(12); // Öğrenci No
+            $sheet->getColumnDimension('B')->setWidth(15); // Ad
+            $sheet->getColumnDimension('C')->setWidth(15); // Soyad
+            $sheet->getColumnDimension('D')->setWidth(12); // Akademik Yıl
+            $sheet->getColumnDimension('E')->setWidth(25); // Bölüm
+            $sheet->getColumnDimension('F')->setWidth(15); // Sınıf Durumu
+            $sheet->getColumnDimension('G')->setWidth(20); // Laboratuvar Adı
+            $sheet->getColumnDimension('H')->setWidth(12); // PC Numarası
+            $sheet->getColumnDimension('I')->setWidth(18); // Atama Tarihi
 
             // Veri satırları için stil
             $dataStyle = [
@@ -1203,12 +1264,16 @@ class AssignmentController {
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setTitle($labInfo['lab_name'] ?? 'Laboratuvar Atamaları');
 
-            // Başlık satırı
+            // Başlık satırı - Template formatına uygun
             $headers = [
-                'A' => 'PC Numarası',
-                'B' => 'Öğrenci Adı Soyadı',
-                'C' => 'Okul Numarası',
-                'D' => 'Akademik Yıl'
+                'A' => 'Öğrenci No',
+                'B' => 'Ad',
+                'C' => 'Soyad',
+                'D' => 'Akademik Yıl',
+                'E' => 'Bölüm',
+                'F' => 'Sınıf Durumu',
+                'G' => 'PC Numarası',
+                'H' => 'Atama Tarihi'
             ];
 
             // Başlıkları yaz
@@ -1238,24 +1303,37 @@ class AssignmentController {
                 ]
             ];
 
-            $sheet->getStyle('A1:D1')->applyFromArray($headerStyle);
+            $sheet->getStyle('A1:H1')->applyFromArray($headerStyle);
 
-            // Verileri yaz
+            // Verileri yaz - Template formatına uygun
             $row = 2;
             foreach ($assignments as $assignment) {
+                // Ad ve soyadı ayır
+                $nameParts = explode(' ', $assignment['full_name'], 2);
+                $firstName = $nameParts[0] ?? '';
+                $lastName = $nameParts[1] ?? '';
+                
+                $sheet->setCellValue('A' . $row, $assignment['sdt_nmbr']); // Öğrenci No
+                $sheet->setCellValue('B' . $row, $firstName); // Ad
+                $sheet->setCellValue('C' . $row, $lastName); // Soyad
+                $sheet->setCellValue('D' . $row, $assignment['academic_year']); // Akademik Yıl
+                $sheet->setCellValue('E' . $row, $assignment['department'] ?? 'N/A'); // Bölüm
+                $sheet->setCellValue('F' . $row, $assignment['class_level'] ?? 'N/A'); // Sınıf Durumu
                 $pcNumber = $assignment['pc_number'] ?? 0;
-                $sheet->setCellValue('A' . $row, 'PC' . str_pad($pcNumber, 2, '0', STR_PAD_LEFT));
-                $sheet->setCellValue('B' . $row, $assignment['full_name']);
-                $sheet->setCellValue('C' . $row, $assignment['sdt_nmbr']);
-                $sheet->setCellValue('D' . $row, $assignment['academic_year']);
+                $sheet->setCellValue('G' . $row, 'PC' . str_pad($pcNumber, 2, '0', STR_PAD_LEFT)); // PC Numarası
+                $sheet->setCellValue('H' . $row, $assignment['created_at'] ?? date('Y-m-d H:i:s')); // Atama Tarihi
                 $row++;
             }
 
-            // Sütun genişliklerini ayarla
-            $sheet->getColumnDimension('A')->setWidth(15);
-            $sheet->getColumnDimension('B')->setWidth(25);
-            $sheet->getColumnDimension('C')->setWidth(15);
-            $sheet->getColumnDimension('D')->setWidth(12);
+            // Sütun genişliklerini ayarla - Template formatına uygun
+            $sheet->getColumnDimension('A')->setWidth(12); // Öğrenci No
+            $sheet->getColumnDimension('B')->setWidth(15); // Ad
+            $sheet->getColumnDimension('C')->setWidth(15); // Soyad
+            $sheet->getColumnDimension('D')->setWidth(12); // Akademik Yıl
+            $sheet->getColumnDimension('E')->setWidth(25); // Bölüm
+            $sheet->getColumnDimension('F')->setWidth(15); // Sınıf Durumu
+            $sheet->getColumnDimension('G')->setWidth(12); // PC Numarası
+            $sheet->getColumnDimension('H')->setWidth(18); // Atama Tarihi
 
             // Veri satırları için stil
             $dataStyle = [
@@ -1272,7 +1350,7 @@ class AssignmentController {
             ];
 
             if ($row > 2) {
-                $sheet->getStyle('A2:G' . ($row - 1))->applyFromArray($dataStyle);
+                $sheet->getStyle('A2:H' . ($row - 1))->applyFromArray($dataStyle);
             }
 
             // Excel dosyasını oluştur

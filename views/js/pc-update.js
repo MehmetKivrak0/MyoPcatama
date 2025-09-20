@@ -18,7 +18,7 @@ class PCUpdateManager {
     init() {
         this.createUpdateModal();
         this.bindEvents();
-        console.log('🔄 PC Update Manager initialized');
+        // console.log('🔄 PC Update Manager initialized');
     }
 
     /**
@@ -96,11 +96,77 @@ class PCUpdateManager {
      * Event listener'ları bağla
      */
     bindEvents() {
-
         // Modal kapatıldığında temizle
         document.getElementById('pcUpdateModal').addEventListener('hidden.bs.modal', () => {
             this.resetModal();
         });
+    }
+
+    /**
+     * Base URL'i al (DRY prensibi)
+     */
+    getBaseUrl() {
+        return window.location.origin + '/myopc';
+    }
+
+    /**
+     * API isteği yap (DRY prensibi)
+     */
+    async makeApiRequest(endpoint, options = {}) {
+        const baseUrl = this.getBaseUrl();
+        const url = `${baseUrl}/controllers/AssignmentController.php?${endpoint}`;
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            ...options
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    /**
+     * POST API isteği yap (DRY prensibi)
+     */
+    async makePostRequest(action, formData) {
+        const baseUrl = this.getBaseUrl();
+        const url = `${baseUrl}/controllers/AssignmentController.php?action=${action}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    /**
+     * Hata durumunu göster (DRY prensibi)
+     */
+    showErrorState(container, message, retryCallback = null) {
+        const retryButton = retryCallback ? `
+            <button class="btn btn-outline-primary btn-sm" onclick="(${retryCallback.toString()})()">
+                <i class="fas fa-redo me-2"></i>Tekrar Dene
+            </button>
+        ` : '';
+        
+        container.innerHTML = `
+            <div class="col-12 text-center py-4">
+                <i class="fas fa-exclamation-triangle fa-2x text-warning mb-3"></i>
+                <p class="text-muted">${message}</p>
+                ${retryButton}
+            </div>
+        `;
     }
 
     /**
@@ -110,7 +176,7 @@ class PCUpdateManager {
         this.currentLabId = labId || window.currentLabId;
         this.currentLabName = labName || window.currentLabName;
         
-        console.log('🚀 Update Modal açılıyor - labId:', this.currentLabId, 'labName:', this.currentLabName);
+        // console.log('🚀 Update Modal açılıyor - labId:', this.currentLabId, 'labName:', this.currentLabName);
         
         // Modal başlığını güncelle
         document.getElementById('updateLabName').textContent = this.currentLabName;
@@ -138,11 +204,9 @@ class PCUpdateManager {
         pcListContainer.innerHTML = loadingHTML;
 
         try {
-            console.log('🔄 PC yükleme başlıyor - computerId:', this.currentLabId);
-            const response = await fetch(`../controllers/AssignmentController.php?action=get_lab_pcs&computer_id=${this.currentLabId}`);
-            console.log('📡 API Response:', response);
-            const data = await response.json();
-            console.log('📋 API Data:', data);
+            // console.log('🔄 PC yükleme başlıyor - computerId:', this.currentLabId);
+            const data = await this.makeApiRequest(`action=get_lab_pcs&computer_id=${this.currentLabId}`);
+            // console.log('📋 API Data:', data);
 
             if (data.success) {
                 this.displayPCsForUpdate(data.pcs);
@@ -151,15 +215,9 @@ class PCUpdateManager {
             }
         } catch (error) {
             console.error('PC yükleme hatası:', error);
-            pcListContainer.innerHTML = `
-                <div class="col-12 text-center py-4">
-                    <i class="fas fa-exclamation-triangle fa-2x text-warning mb-3"></i>
-                    <p class="text-muted">PC verileri yüklenirken hata oluştu</p>
-                    <button class="btn btn-outline-primary btn-sm" onclick="pcUpdateManager.loadPCsForUpdate()">
-                        <i class="fas fa-redo me-2"></i>Tekrar Dene
-                    </button>
-                </div>
-            `;
+            this.showErrorState(pcListContainer, 'PC verileri yüklenirken hata oluştu', () => {
+                this.loadPCsForUpdate();
+            });
         }
     }
 
@@ -268,8 +326,7 @@ class PCUpdateManager {
 
         // PC'deki öğrenci bilgilerini getir
         try {
-            const response = await fetch(`../controllers/AssignmentController.php?action=get_pc_students&pc_id=${pcId}`);
-            const data = await response.json();
+            const data = await this.makeApiRequest(`action=get_pc_students&pc_id=${pcId}`);
 
             if (data.success) {
                 this.displayStudentDetails(data.students, pcId, pcNumber);
@@ -413,8 +470,7 @@ class PCUpdateManager {
     async loadAvailablePCsForTransfer(studentId, currentPcId) {
         try {
             // Önce tüm PC'leri getir
-            const response = await fetch(`../controllers/AssignmentController.php?action=get_lab_pcs&computer_id=${this.currentLabId}`);
-            const data = await response.json();
+            const data = await this.makeApiRequest(`action=get_lab_pcs&computer_id=${this.currentLabId}`);
 
             if (data.success) {
                 const select = document.getElementById('newPcSelect');
@@ -427,9 +483,13 @@ class PCUpdateManager {
                     }
                     
                     const option = document.createElement('option');
-                    const isOccupied = pc.student_id && pc.student_id !== null;
-                    const statusText = isOccupied ? 'Dolu' : 'Boş';
-                    const statusClass = isOccupied ? 'text-danger' : 'text-success';
+                    // PC'nin dolu olup olmadığını kontrol et
+                    const isOccupied = (pc.students && pc.students.length > 0) || (pc.student_count && pc.student_count > 0);
+                    const studentCount = pc.students ? pc.students.length : (pc.student_count || 0);
+                    const statusText = isOccupied ? `${studentCount} kişi` : 'Boş';
+                    const statusClass = isOccupied ? 'text-warning' : 'text-success';
+                    
+                    console.log('📋 Transfer PC:', pc.pc_id, pc.pc_number, 'isOccupied:', isOccupied, 'students:', pc.students, 'student_count:', pc.student_count, 'statusText:', statusText);
                     
                     option.value = pc.pc_id;
                     option.innerHTML = `PC ${pc.pc_number} (${statusText})`;
@@ -459,12 +519,7 @@ class PCUpdateManager {
             formData.append('new_pc_id', newPcId);
             formData.append('computer_id', this.currentLabId);
 
-            const response = await fetch('../controllers/AssignmentController.php?action=transfer_student', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await response.json();
+            const data = await this.makePostRequest('transfer_student', formData);
 
             if (data.success) {
                 showToast('Başarılı', 'Öğrenci başarıyla transfer edildi', 'success');
@@ -492,12 +547,7 @@ class PCUpdateManager {
             formData.append('student_id', studentId);
             formData.append('computer_id', this.currentLabId);
 
-            const response = await fetch('../controllers/AssignmentController.php?action=unassign_student', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await response.json();
+            const data = await this.makePostRequest('unassign_student', formData);
 
             if (data.success) {
                 showToast('Başarılı', 'Atama başarıyla kaldırıldı', 'success');
@@ -531,15 +581,31 @@ const pcUpdateManager = new PCUpdateManager();
 
 // Global fonksiyonlar
 function openPCUpdate(labId, labName) {
+    console.log('🔧 openPCUpdate çağrıldı:', labId, labName);
+    console.log('🔧 window.currentLabId:', window.currentLabId);
+    console.log('🔧 window.currentLabName:', window.currentLabName);
+    console.log('🔧 pcUpdateManager:', pcUpdateManager);
+    
     // Eğer parametreler verilmemişse global değişkenleri kullan
     const finalLabId = labId || window.currentLabId;
     const finalLabName = labName || window.currentLabName;
     
+    console.log('🔧 finalLabId:', finalLabId);
+    console.log('🔧 finalLabName:', finalLabName);
+    
     if (!finalLabId || !finalLabName) {
+        console.error('❌ Laboratuvar bilgileri eksik');
         showToast('Hata', 'Laboratuvar bilgileri bulunamadı', 'error');
         return;
     }
     
+    if (!pcUpdateManager) {
+        console.error('❌ pcUpdateManager tanımlı değil');
+        showToast('Hata', 'PC güncelleme sistemi yüklenemedi', 'error');
+        return;
+    }
+    
+    console.log('🔧 pcUpdateManager.openUpdateModal çağrılıyor');
     pcUpdateManager.openUpdateModal(finalLabId, finalLabName);
 }
 

@@ -6,18 +6,23 @@ ini_set('display_errors', 0);
 // Türkçe karakter yardımcısını dahil et
 require_once '../utils/TurkishCharacterHelper.php';
 
-// Doğrudan MySQLi bağlantısı
-// Local development
-$host = 'localhost';
-$username = 'root';
-$password = '';
-$database = 'myopc';
+// Ortam tespiti ile dinamik bağlantı
+require_once '../includes/environment_detector.php';
+$environment = detectEnvironment();
 
-// Production için (sunucuya yüklerken bu ayarları kullanın):
-// $host = 'your_host';
-// $username = 'your_username';
-// $password = 'your_password';
-// $database = 'your_database';
+if ($environment['isSchoolServer']) {
+    // School server (xrlab.mcbu.edu.tr) için
+    $host = 'localhost'; // Okul sunucusunda genellikle localhost
+    $username = 'xrlab_user'; // Gerçek kullanıcı adı
+    $password = 'xrlab_password'; // Gerçek şifre
+    $database = 'xrlab_myopc'; // Gerçek veritabanı adı
+} else {
+    // Local development
+    $host = 'localhost';
+    $username = 'root';
+    $password = '';
+    $database = 'myopc';
+}
 
 try {
     $mysqli = new mysqli($host, $username, $password, $database);

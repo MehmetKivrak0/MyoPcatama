@@ -44,7 +44,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $studentData = [
                 'sdt_nmbr' => trim($_POST['sdt_nmbr'] ?? ''),
                 'full_name' => trim($_POST['full_name'] ?? ''),
-                'academic_year' => intval($_POST['academic_year'] ?? date('Y'))
+                'academic_year' => intval($_POST['academic_year'] ?? date('Y')),
+                'department' => trim($_POST['department'] ?? ''),
+                'class_level' => trim($_POST['class_level'] ?? '')
             ];
             
             // Validasyon
@@ -67,7 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $studentData = [
                 'sdt_nmbr' => trim($_POST['sdt_nmbr'] ?? ''),
                 'full_name' => trim($_POST['full_name'] ?? ''),
-                'academic_year' => intval($_POST['academic_year'] ?? date('Y'))
+                'academic_year' => intval($_POST['academic_year'] ?? date('Y')),
+                'department' => trim($_POST['department'] ?? ''),
+                'class_level' => trim($_POST['class_level'] ?? '')
             ];
             
             // Validasyon
@@ -123,13 +127,17 @@ $offset = ($page - 1) * $limit;
 // Filtreleme parametreleri
 $year_filter = $_GET['year'] ?? '';
 $search = $_GET['search'] ?? '';
+$department_filter = $_GET['department'] ?? '';
+$class_filter = $_GET['class'] ?? '';
 
 // Öğrenci listesini getir (sayfalama ile)
-$students = $studentModel->getStudentsPaginated($offset, $limit, $year_filter, $search);
-$total_students = $studentModel->getTotalStudents($year_filter, $search);
+$students = $studentModel->getStudentsPaginated($offset, $limit, $year_filter, $search, $department_filter, $class_filter);
+$total_students = $studentModel->getTotalStudents($year_filter, $search, $department_filter, $class_filter);
 $total_pages = ceil($total_students / $limit);
 
 $years = $studentModel->getAvailableYears();
+$departments = $studentModel->getAvailableDepartments();
+$classes = $studentModel->getAvailableClasses();
 ?>
 
 <!DOCTYPE html>
@@ -160,6 +168,59 @@ $years = $studentModel->getAvailableYears();
             border-radius: 10px;
             padding: 1.5rem;
             margin-bottom: 2rem;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .filter-section h5 {
+            color: #495057;
+            font-weight: 600;
+        }
+        
+        .filter-section .form-label {
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+        
+        .filter-section .form-control,
+        .filter-section .form-select {
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            transition: all 0.15s ease-in-out;
+        }
+        
+        .filter-section .form-control:focus,
+        .filter-section .form-select:focus {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        .filter-section .btn {
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.15s ease-in-out;
+        }
+        
+        .filter-section .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .alert-info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            border: 1px solid #b8daff;
+            color: #0c5460;
+        }
+        
+        .alert-info .btn-outline-danger {
+            border-color: #dc3545;
+            color: #dc3545;
+        }
+        
+        .alert-info .btn-outline-danger:hover {
+            background-color: #dc3545;
+            color: white;
         }
         
         /* Dashboard ile tutarlı navbar */
@@ -512,6 +573,50 @@ $years = $studentModel->getAvailableYears();
             }
         }
         
+        /* Öğrenci Kartı Özel Stilleri */
+        .student-card {
+            height: 290px !important; /* Yeni bilgiler için daha yüksek */
+        }
+        
+        .department-item {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%) !important;
+            border-left: 3px solid #2196f3 !important;
+        }
+        
+        .department-item i {
+            color: #2196f3 !important;
+        }
+        
+        .class-item {
+            background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%) !important;
+            border-left: 3px solid #4caf50 !important;
+        }
+        
+        .class-item i {
+            color: #4caf50 !important;
+        }
+        
+        .student-detail-item {
+            margin-bottom: 6px;
+        }
+        
+        .student-detail-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Sınıf ve Bölüm için özel vurgu */
+        .department-item .student-detail-value,
+        .class-item .student-detail-value {
+            font-weight: 600;
+            color: #1a202c;
+        }
+        
+        .department-item .student-detail-label,
+        .class-item .student-detail-label {
+            font-weight: 700;
+            color: #2d3748;
+        }
+
         /* Main Content Mobile Adjustments */
         @media (max-width: 768px) {
             .main-content {
@@ -522,6 +627,11 @@ $years = $studentModel->getAvailableYears();
             .container-fluid {
                 padding-left: 0.5rem;
                 padding-right: 0.5rem;
+            }
+            
+            /* Tablet için kart yüksekliği */
+            .student-card {
+                height: 200px !important;
             }
         }
         
@@ -534,6 +644,27 @@ $years = $studentModel->getAvailableYears();
             .container-fluid {
                 padding-left: 0.25rem;
                 padding-right: 0.25rem;
+            }
+            
+            /* Mobil için sınıf ve bölüm stilleri */
+            .student-card {
+                height: 180px !important; /* Mobil için uygun yükseklik */
+            }
+            
+            .department-item,
+            .class-item {
+                padding: 4px 8px !important;
+                margin-bottom: 4px !important;
+            }
+            
+            .department-item .student-detail-label,
+            .class-item .student-detail-label {
+                font-size: 0.7rem !important;
+            }
+            
+            .department-item .student-detail-value,
+            .class-item .student-detail-value {
+                font-size: 0.75rem !important;
             }
         }
         
@@ -601,8 +732,7 @@ $years = $studentModel->getAvailableYears();
             <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
                 <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" class="img-fluid me-2" style="width: 35px; height: auto;">
                 <div class="brand-text d-none d-md-block">
-                    <div class="text-blue fw-bold">MyoPC</div>
-                    <div class="text-white small">Öğrenci Yönetimi</div>
+                    <div class="text-white small">Öğrenci Atama <br>Sistemi</div>
                 </div>
                 <div class="brand-text d-block d-md-none">
                     <div class="text-blue fw-bold">MyoPC</div>
@@ -650,8 +780,8 @@ $years = $studentModel->getAvailableYears();
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="text-center">
-                            <h2 class="mb-0"><?php echo $year_filter ? number_format($total_students) : number_format($studentModel->getTotalStudents(date('Y'))); ?></h2>
-                            <p class="mb-0"><?php echo $year_filter ? 'Filtrelenmiş' : 'Bu Yıl'; ?></p>
+                            <h2 class="mb-0"><?php echo ($year_filter || $department_filter || $class_filter || $search) ? number_format($total_students) : number_format($studentModel->getTotalStudents(date('Y'))); ?></h2>
+                            <p class="mb-0"><?php echo ($year_filter || $department_filter || $class_filter || $search) ? 'Filtrelenmiş' : 'Bu Yıl'; ?></p>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
@@ -675,38 +805,112 @@ $years = $studentModel->getAvailableYears();
 
             <!-- Filtreler -->
             <div class="filter-section">
-                <form method="GET" id="filterForm">
-                    <div class="row g-3">
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Yıl Filtresi</label>
-                            <select class="form-select" name="year" id="yearFilter" onchange="submitFilter()">
-                                <option value="">Tüm Yıllar</option>
-                                <?php foreach ($years as $year): ?>
-                                    <option value="<?php echo $year['year']; ?>" <?php echo $year_filter == $year['year'] ? 'selected' : ''; ?>><?php echo $year['year']; ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Arama</label>
-                            <input type="text" class="form-control" name="search" id="searchInput" placeholder="Öğrenci adı veya numarası..." value="<?php echo htmlspecialchars($search); ?>" onkeyup="debounceSearch()">
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label d-none d-md-block">&nbsp;</label>
-                            <div class="d-flex flex-column flex-md-row gap-2">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-search me-1"></i>
-                                    <span class="d-none d-sm-inline">Filtrele</span>
-                                    <span class="d-inline d-sm-none">Ara</span>
-                                </button>
-                                <a href="student_management.php" class="btn btn-outline-secondary">
-                                    <i class="fas fa-times me-1"></i>
-                                    <span class="d-none d-sm-inline">Temizle</span>
-                                    <span class="d-inline d-sm-none">Temizle</span>
-                                </a>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>Filtreler
+                    </h5>
+                    <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                        <i class="fas fa-chevron-down me-1"></i>
+                        <span class="d-none d-sm-inline">Filtreleri Gizle/Göster</span>
+                        <span class="d-inline d-sm-none">Filtreler</span>
+                    </button>
+                </div>
+                
+                <div class="collapse show" id="filterCollapse">
+                    <form method="GET" id="filterForm">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6 col-lg-3">
+                                <label class="form-label">
+                                    <i class="fas fa-calendar-alt me-1"></i>Yıl Filtresi
+                                </label>
+                                <select class="form-select" name="year" id="yearFilter" onchange="submitFilter()">
+                                    <option value="">Tüm Yıllar</option>
+                                    <?php foreach ($years as $year): ?>
+                                        <option value="<?php echo $year['year']; ?>" <?php echo $year_filter == $year['year'] ? 'selected' : ''; ?>><?php echo $year['year']; ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            
+                            <div class="col-12 col-md-6 col-lg-3">
+                                <label class="form-label">
+                                    <i class="fas fa-building me-1"></i>Bölüm Filtresi
+                                </label>
+                                <select class="form-select" name="department" id="departmentFilter" onchange="submitFilter()">
+                                    <option value="">Tüm Bölümler</option>
+                                    <?php foreach ($departments as $department): ?>
+                                        <option value="<?php echo htmlspecialchars($department['department']); ?>" <?php echo $department_filter == $department['department'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($department['department']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            
+                            <div class="col-12 col-md-6 col-lg-3">
+                                <label class="form-label">
+                                    <i class="fas fa-graduation-cap me-1"></i>Sınıf Filtresi
+                                </label>
+                                <select class="form-select" name="class" id="classFilter" onchange="submitFilter()">
+                                    <option value="">Tüm Sınıflar</option>
+                                    <?php foreach ($classes as $class): ?>
+                                        <option value="<?php echo htmlspecialchars($class['class_level']); ?>" <?php echo $class_filter == $class['class_level'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($class['class_level']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            
+                            <div class="col-12 col-md-6 col-lg-3">
+                                <label class="form-label">
+                                    <i class="fas fa-search me-1"></i>Arama
+                                </label>
+                                <input type="text" class="form-control" name="search" id="searchInput" placeholder="Ad, soyad veya numara..." value="<?php echo htmlspecialchars($search); ?>" onkeyup="debounceSearch()">
                             </div>
                         </div>
-                    </div>
-                </form>
+                        
+                        <div class="row g-3 mt-2">
+                            <div class="col-12">
+                                <div class="d-flex flex-wrap gap-2 justify-content-center">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-search me-1"></i>
+                                        <span class="d-none d-sm-inline">Filtrele</span>
+                                        <span class="d-inline d-sm-none">Ara</span>
+                                    </button>
+                                    <a href="student_management.php" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i>
+                                        <span class="d-none d-sm-inline">Tüm Filtreleri Temizle</span>
+                                        <span class="d-inline d-sm-none">Temizle</span>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-info" onclick="resetFilters()">
+                                        <i class="fas fa-undo me-1"></i>
+                                        <span class="d-none d-sm-inline">Sıfırla</span>
+                                        <span class="d-inline d-sm-none">Sıfırla</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Aktif Filtreler -->
+                        <?php if ($year_filter || $department_filter || $class_filter || $search): ?>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="alert alert-info d-flex align-items-center">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <div class="flex-grow-1">
+                                        <strong>Aktif Filtreler:</strong>
+                                        <?php
+                                        $active_filters = [];
+                                        if ($year_filter) $active_filters[] = "Yıl: {$year_filter}";
+                                        if ($department_filter) $active_filters[] = "Bölüm: {$department_filter}";
+                                        if ($class_filter) $active_filters[] = "Sınıf: {$class_filter}";
+                                        if ($search) $active_filters[] = "Arama: {$search}";
+                                        echo implode(' | ', $active_filters);
+                                        ?>
+                                    </div>
+                                    <a href="student_management.php" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-times"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    </form>
+                </div>
             </div>
 
             <!-- Öğrenci Listesi -->
@@ -728,21 +932,31 @@ $years = $studentModel->getAvailableYears();
                     
                     <!-- Kart İçeriği -->
                     <div class="student-info">
-                        
+                        <div class="student-detail-item department-item">
+                            <i class="fas fa-building"></i>
+                            <span class="student-detail-label">Bölüm:</span>
+                            <span class="student-detail-value"><?php echo htmlspecialchars($student['department'] ?? 'Belirtilmemiş'); ?></span>
+                        </div>
+                        <div class="student-detail-item class-item">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span class="student-detail-label">Sınıf:</span>
+                            <span class="student-detail-value"><?php echo htmlspecialchars($student['class_level'] ?? 'Belirtilmemiş'); ?></span>
+                        </div>
+                       
                         <div class="student-detail-item">
                             <i class="fas fa-id-card"></i>
                             <span class="student-detail-label">Numara:</span>
                             <span class="student-detail-value"><?php echo htmlspecialchars($student['sdt_nmbr']); ?></span>
                         </div>
                         <div class="student-detail-item">
-                            <i class="fas fa-clock"></i>
-                            <span class="student-detail-labels">Eklenme:</span>
-                            <span class="student-detail-values"><?php echo date('d.m.Y', strtotime($student['created_at'])); ?></span>
-                        </div>
-                        <div class="student-detail-item">
                             <i class="fas fa-calendar-alt"></i>
                             <span class="student-detail-label">Yıl:</span>
                             <span class="student-detail-value"><?php echo $student['academic_year']; ?></span>
+                        </div>
+                        <div class="student-detail-item">
+                            <i class="fas fa-clock"></i>
+                            <span class="student-detail-labels">Eklenme:</span>
+                            <span class="student-detail-values"><?php echo date('d.m.Y', strtotime($student['created_at'])); ?></span>
                         </div>
                     </div>
                 </div>
@@ -756,7 +970,7 @@ $years = $studentModel->getAvailableYears();
                     <ul class="pagination justify-content-center">
                         <!-- Önceki sayfa -->
                         <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
-                            <a class="page-link" href="?page=<?php echo $page - 1; ?>&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>">
+                            <a class="page-link" href="?page=<?php echo $page - 1; ?>&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>&department=<?php echo urlencode($department_filter); ?>&class=<?php echo urlencode($class_filter); ?>">
                                 <i class="fas fa-chevron-left"></i> Önceki
                             </a>
                         </li>
@@ -768,7 +982,7 @@ $years = $studentModel->getAvailableYears();
                         
                         if ($start_page > 1): ?>
                             <li class="page-item">
-                                <a class="page-link" href="?page=1&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>">1</a>
+                                <a class="page-link" href="?page=1&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>&department=<?php echo urlencode($department_filter); ?>&class=<?php echo urlencode($class_filter); ?>">1</a>
                             </li>
                             <?php if ($start_page > 2): ?>
                                 <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -777,7 +991,7 @@ $years = $studentModel->getAvailableYears();
                         
                         <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
                             <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                                <a class="page-link" href="?page=<?php echo $i; ?>&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
+                                <a class="page-link" href="?page=<?php echo $i; ?>&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>&department=<?php echo urlencode($department_filter); ?>&class=<?php echo urlencode($class_filter); ?>"><?php echo $i; ?></a>
                             </li>
                         <?php endfor; ?>
                         
@@ -786,13 +1000,13 @@ $years = $studentModel->getAvailableYears();
                                 <li class="page-item disabled"><span class="page-link">...</span></li>
                             <?php endif; ?>
                             <li class="page-item">
-                                <a class="page-link" href="?page=<?php echo $total_pages; ?>&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>"><?php echo $total_pages; ?></a>
+                                <a class="page-link" href="?page=<?php echo $total_pages; ?>&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>&department=<?php echo urlencode($department_filter); ?>&class=<?php echo urlencode($class_filter); ?>"><?php echo $total_pages; ?></a>
                             </li>
                         <?php endif; ?>
                         
                         <!-- Sonraki sayfa -->
                         <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
-                            <a class="page-link" href="?page=<?php echo $page + 1; ?>&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>">
+                            <a class="page-link" href="?page=<?php echo $page + 1; ?>&year=<?php echo $year_filter; ?>&search=<?php echo urlencode($search); ?>&department=<?php echo urlencode($department_filter); ?>&class=<?php echo urlencode($class_filter); ?>">
                                 Sonraki <i class="fas fa-chevron-right"></i>
                             </a>
                         </li>
@@ -873,6 +1087,30 @@ $years = $studentModel->getAvailableYears();
                                    name="full_name" 
                                    placeholder="Örn: Ahmet Yılmaz"
                                    required>
+                        </div>
+                        
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="modalDepartment" class="form-label">
+                                    Bölüm
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="modalDepartment" 
+                                       name="department" 
+                                       placeholder="Örn: Bilgisayar Programcılığı">
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="modalClassLevel" class="form-label">
+                                    Sınıf Durumu
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="modalClassLevel" 
+                                       name="class_level" 
+                                       placeholder="Örn: 1. Sınıf">
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -1138,6 +1376,8 @@ $years = $studentModel->getAvailableYears();
             document.getElementById('modalSdtNmbr').value = student.sdt_nmbr || '';
             document.getElementById('modalFullName').value = student.full_name || '';
             document.getElementById('modalAcademicYear').value = student.academic_year || '';
+            document.getElementById('modalDepartment').value = student.department || '';
+            document.getElementById('modalClassLevel').value = student.class_level || '';
         }
         
         function resetModal() {
@@ -1215,10 +1455,50 @@ $years = $studentModel->getAvailableYears();
             document.getElementById('filterForm').submit();
         }
         
+        function resetFilters() {
+            // Tüm filtreleri temizle
+            document.getElementById('yearFilter').value = '';
+            document.getElementById('departmentFilter').value = '';
+            document.getElementById('classFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            
+            // Formu gönder
+            submitFilter();
+        }
+        
         function filterStudents() {
             // Bu fonksiyon artık kullanılmıyor, server-side filtreleme kullanılıyor
             submitFilter();
         }
+        
+        // Filtre değişikliklerini takip et
+        document.addEventListener('DOMContentLoaded', function() {
+            // Filtre collapse toggle
+            const filterToggle = document.querySelector('[data-bs-target="#filterCollapse"]');
+            const filterCollapse = document.getElementById('filterCollapse');
+            
+            if (filterToggle && filterCollapse) {
+                filterToggle.addEventListener('click', function() {
+                    const icon = this.querySelector('i');
+                    if (filterCollapse.classList.contains('show')) {
+                        icon.className = 'fas fa-chevron-right me-1';
+                    } else {
+                        icon.className = 'fas fa-chevron-down me-1';
+                    }
+                });
+            }
+            
+            // Enter tuşu ile arama
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submitFilter();
+                    }
+                });
+            }
+        });
         
     </script>
 </body>

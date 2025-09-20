@@ -1,4 +1,9 @@
 <?php
+// Cache kontrolü - okul sunucusu için
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 session_start();
 
 // Giriş kontrolü
@@ -35,7 +40,7 @@ try {
     $assignmentCount = $db->fetchOne("SELECT COUNT(*) as count FROM myopc_assignments")['count'] ?? 0;
     
     // Son eklenen öğrenciler
-    $recentStudents = $db->fetchAll("SELECT student_name, student_surname, created_at FROM myopc_students ORDER BY created_at DESC LIMIT 5");
+    $recentStudents = $db->fetchAll("SELECT full_name, created_at FROM myopc_students ORDER BY created_at DESC LIMIT 5");
     
     // Debug için log ekle
     error_log("Dashboard Stats - Student Count: " . $studentCount);
@@ -327,6 +332,229 @@ try {
         
         .action-button:disabled i {
             color: #adb5bd !important;
+        }
+        
+        /* Maksimum öğrenci sayısı için stil */
+        .max-students-info {
+            background-color: #e9ecef;
+            color: #495057;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+            font-weight: 500;
+        }
+
+        /* SİTE UYUMLU KÜÇÜK TOAST SİSTEMİ */
+        .custom-toast {
+            min-width: 280px;
+            max-width: 320px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(30, 58, 95, 0.3);
+            border: 1px solid #e9ecef;
+            overflow: hidden;
+            display: none;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        .custom-toast.show {
+            display: block;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Toast Header - Site Uyumlu */
+        .toast-header-new {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #4a90a4 100%);
+            color: white;
+            border-bottom: none;
+        }
+
+        .toast-icon {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .toast-icon i {
+            font-size: 14px;
+            color: white;
+        }
+
+        .toast-title {
+            flex: 1;
+            font-weight: 600;
+            font-size: 13px;
+            line-height: 1.2;
+        }
+
+        .toast-close {
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+
+        .btn-close-new {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-close-new:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Toast Body - Kompakt Tasarım */
+        .toast-body-new {
+            padding: 12px;
+            background: #f8f9fa;
+            color: #495057;
+        }
+
+        /* Öğrenci Bilgileri - Kompakt */
+        .student-info-new {
+            background: white;
+            border-radius: 6px;
+            padding: 10px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .student-name-new {
+            text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+            padding: 6px 8px;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+            border-radius: 4px;
+        }
+
+        .student-details-new {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
+        }
+
+        .student-detail-item-new {
+            display: flex !important;
+            align-items: center !important;
+            padding: 6px 8px !important;
+            background: #f8f9fa !important;
+            border-radius: 4px !important;
+            border-left: 3px solid #007bff !important;
+            font-size: 12px !important;
+            margin-bottom: 0 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        .student-detail-item-new.department {
+            border-left-color: #28a745 !important;
+            display: flex !important;
+        }
+
+        .student-detail-item-new.class {
+            border-left-color: #ffc107 !important;
+            display: flex !important;
+        }
+
+        .student-detail-item-new.year {
+            border-left-color: #17a2b8 !important;
+            display: flex !important;
+        }
+
+        .student-detail-item-new.number {
+            border-left-color: #6f42c1 !important;
+            display: flex !important;
+        }
+
+        .student-detail-item-new i {
+            width: 16px !important;
+            text-align: center !important;
+            margin-right: 8px !important;
+            font-size: 12px !important;
+            flex-shrink: 0 !important;
+        }
+
+        .student-detail-item-new.number i {
+            color: #6f42c1;
+        }
+
+        .student-detail-item-new.year i {
+            color: #17a2b8;
+        }
+
+        .student-detail-item-new.department i {
+            color: #28a745;
+        }
+
+        .student-detail-item-new.class i {
+            color: #ffc107;
+        }
+
+        .student-detail-item-new span {
+            font-size: 11px !important;
+            color: #495057 !important;
+            flex: 1 !important;
+            word-wrap: break-word !important;
+            line-height: 1.3 !important;
+        }
+
+        .student-detail-item-new strong {
+            font-weight: 600 !important;
+            color: #2c3e50 !important;
+            margin-right: 4px !important;
+        }
+
+        /* Responsive Tasarım */
+        @media (max-width: 576px) {
+            .custom-toast {
+                min-width: 260px;
+                max-width: 90vw;
+            }
+            
+            .toast-header-new {
+                padding: 8px 10px;
+            }
+            
+            .toast-body-new {
+                padding: 10px;
+            }
+            
+            .student-name-new {
+                font-size: 13px;
+                padding: 5px 6px;
+            }
+            
+            .student-detail-item-new {
+                padding: 3px 5px;
+            }
+            
+            .student-detail-item-new span {
+                font-size: 10px;
+            }
         }
     </style>
 </head>
@@ -731,6 +959,31 @@ try {
                             Şu anda <span id="currentStudentCount">0</span> öğrenci atanmış durumda.
                         </div>
                         
+                        <!-- Filtreleme Bölümü -->
+                        <div class="filter-section mb-3">
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control form-control-sm" id="modalSearchInput" 
+                                           placeholder="Öğrenci ara..." style="width: 100%;">
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select form-select-sm" id="modalYearFilter" style="width: 100%;">
+                                        <option value="">Tüm Yıllar</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select form-select-sm" id="modalDepartmentFilter" style="width: 100%;">
+                                        <option value="">Tüm Bölümler</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-sm btn-outline-primary w-100" onclick="applyModalFilters()">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Loading Indicator -->
                         <div id="studentLoadingIndicator" class="text-center py-4" style="display: none;">
                             <div class="spinner-border text-primary" role="status">
@@ -762,15 +1015,23 @@ try {
     </div>
 
 
-    <!-- Toast Notification -->
+    <!-- Yeni Toast Notification Sistemi -->
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
-        <div id="systemToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header">
-                <i class="fas fa-info-circle text-primary me-2"></i>
-                <strong class="me-auto">Sistem Bildirimi</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        <div id="systemToast" class="custom-toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header-new">
+                <div class="toast-icon">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="toast-title">
+                    <span>Sistem Bildirimi</span>
+                </div>
+                <div class="toast-close">
+                    <button type="button" class="btn-close-new" onclick="hideToast()" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
-            <div class="toast-body" id="toastMessage">
+            <div class="toast-body-new" id="toastMessage">
                 <!-- Bildirim mesajı buraya gelecek -->
             </div>
         </div>
@@ -888,6 +1149,12 @@ try {
     <script src="js/pc-update.js?v=<?php echo time(); ?>"></script>
     <script src="js/export-assignments.js?v=<?php echo time(); ?>"></script>
     <script src="js/student-year-filter.js?v=<?php echo time(); ?>"></script>
+    
+    <!-- Test System JavaScript -->
+    <script src="js/test-system.js?v=<?php echo time(); ?>"></script>
+    <script src="js/test-functions.js?v=<?php echo time(); ?>"></script>
+    <script src="js/test-reports.js?v=<?php echo time(); ?>"></script>
+    
     <script>
         // Sayfa yüklendiğinde laboratuvar seçimi yapılmaz
         document.addEventListener('DOMContentLoaded', function() {
@@ -896,313 +1163,72 @@ try {
             console.log('🔍 Laboratuvar seçici bulundu:', labSelector);
             console.log('🔍 Laboratuvar seçici options sayısı:', labSelector ? labSelector.options.length : 0);
             
-            // Laboratuvar seçimi yapılmaz, kullanıcı manuel olarak seçmeli
+            // Laboratuvar seçimi kullanıcıya bırakıldı
             console.log('ℹ️ Laboratuvar seçimi kullanıcıya bırakıldı');
+            
+            // Modal kapatma event listener'ları
+            setupModalCloseListeners();
             
             // Filtreleme sistemi yüklendi
         });
+        
+        // Modal kapatma event listener'larını kur
+        function setupModalCloseListeners() {
+            // Sadece belirli modal'lar için refresh yap
+            const modalsToRefresh = [
+                'assignmentModal',
+                'editPCCountModal',
+                'editMaxStudentsModal'
+            ];
+            
+            modalsToRefresh.forEach(modalId => {
+                const modalElement = document.getElementById(modalId);
+                if (modalElement) {
+                    // Modal kapatıldığında PC kartlarını yenile
+                    modalElement.addEventListener('hidden.bs.modal', function() {
+                        console.log('🔄 Modal kapatıldı:', modalId);
+                        refreshPCCards();
+                    });
+                }
+            });
+            
+            // PC detay modal'ı için özel işlem
+            const pcDetailsModal = document.getElementById('pcDetailsModal');
+            if (pcDetailsModal) {
+                pcDetailsModal.addEventListener('hidden.bs.modal', function() {
+                    console.log('🔄 PC detay modal kapatıldı - refresh yapılmıyor');
+                    // PC detay modal'ı kapatıldığında refresh yapılmıyor
+                    // Sadece "Taşı" ve "Kaldır" butonları çalıştığında refresh yapılıyor
+                });
+            }
+            
+            // Transfer modal'ı için özel işlem
+            const transferModal = document.getElementById('transferModal');
+            if (transferModal) {
+                transferModal.addEventListener('hidden.bs.modal', function() {
+                    console.log('🔄 Transfer modal kapatıldı - refresh yapılmıyor');
+                    // Transfer modal'ı kapatıldığında refresh yapılmıyor
+                    // Sadece transfer işlemi başarılı olduğunda refresh yapılıyor
+                });
+            }
+        }
+        
+        // PC kartlarını yenile
+        function refreshPCCards() {
+            const labSelector = document.getElementById('labSelector');
+            if (labSelector && labSelector.value) {
+                const selectedLabId = labSelector.value;
+                const selectedLabText = labSelector.options[labSelector.selectedIndex].text;
+                console.log('🔄 PC kartları yenileniyor - Lab ID:', selectedLabId, 'Lab Name:', selectedLabText);
+                
+                // loadPCCards fonksiyonunu çağır
+                if (typeof loadPCCards === 'function') {
+                    loadPCCards(selectedLabId, selectedLabText);
+                }
+            }
+        }
     </script>
     <script>
-        // Test sayfasını aç
-        function openTestPage() {
-            console.log('🧪 Test sayfası açılıyor...');
-            try {
-                loadTestContent();
-                const modal = new bootstrap.Modal(document.getElementById('testModal'));
-                modal.show();
-                console.log('✅ Test modal başarıyla açıldı');
-            } catch (error) {
-                console.error('❌ Test modal açılırken hata:', error);
-                alert('Test modal açılırken hata oluştu: ' + error.message);
-            }
-        }
-        
-        // Test içeriğini yükle
-        function loadTestContent() {
-            const testContent = document.getElementById('testContent');
-            testContent.innerHTML = `
-                <div style="padding: 20px; font-family: Arial, sans-serif;">
-                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; margin: -20px -20px 20px -20px;">
-                        <h2><i class="fas fa-bug me-2"></i>Atama Sistemi Test Sayfası</h2>
-                        <p>Atama sisteminin çalışıp çalışmadığını test edin</p>
-                    </div>
-                    
-                    <!-- Test 1: PC Kartları Oluşturma -->
-                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                        <h4><i class="fas fa-desktop me-2"></i>Test 1: PC Kartları Oluşturma</h4>
-                        <p>PC kartlarının doğru şekilde oluşturulup oluşturulmadığını test eder.</p>
-                        <button class="btn btn-success" onclick="testPCCards()">
-                            <i class="fas fa-desktop me-2"></i>PC Kartlarını Test Et
-                        </button>
-                        <div id="test1-result" style="margin-top: 10px;"></div>
-                        <div id="pc-cards-container" style="margin-top: 15px;"></div>
-                    </div>
-
-                    <!-- Test 2: PC ID Kontrolü -->
-                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                        <h4><i class="fas fa-key me-2"></i>Test 2: PC ID Kontrolü</h4>
-                        <p>PC ID'lerinin doğru şekilde set edilip edilmediğini test eder.</p>
-                        <button class="btn btn-success" onclick="testPCIds()">
-                            <i class="fas fa-key me-2"></i>PC ID'lerini Test Et
-                        </button>
-                        <div id="test2-result" style="margin-top: 10px;"></div>
-                    </div>
-
-                    <!-- Test 3: Modal Açma -->
-                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                        <h4><i class="fas fa-window-maximize me-2"></i>Test 3: Modal Açma</h4>
-                        <p>Atama modal'ının doğru şekilde açılıp açılmadığını test eder.</p>
-                        <button class="btn btn-success" onclick="testModal()">
-                            <i class="fas fa-window-maximize me-2"></i>Modal'ı Test Et
-                        </button>
-                        <div id="test3-result" style="margin-top: 10px;"></div>
-                    </div>
-
-                    <!-- Test 4: Atama İşlemi -->
-                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                        <h4><i class="fas fa-user-plus me-2"></i>Test 4: Atama İşlemi</h4>
-                        <p>Atama işleminin doğru şekilde çalışıp çalışmadığını test eder.</p>
-                        <button class="btn btn-success" onclick="testAssignment()">
-                            <i class="fas fa-user-plus me-2"></i>Atama İşlemini Test Et
-                        </button>
-                        <div id="test4-result" style="margin-top: 10px;"></div>
-                    </div>
-
-                    <!-- Test Sonuçları -->
-                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px;">
-                        <h4><i class="fas fa-chart-bar me-2"></i>Test Sonuçları</h4>
-                        <div id="overall-result"></div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Test sayfasını yenile
-        function refreshTest() {
-            loadTestContent();
-        }
-        
-        // Test verileri
-        let testResults = {
-            test1: false,
-            test2: false,
-            test3: false,
-            test4: false
-        };
-
-        const testPCs = [
-            { pc_id: 1, pc_number: 1, student_count: 0, students: [] },
-            { pc_id: 2, pc_number: 2, student_count: 1, students: [{ full_name: 'Test Öğrenci', sdt_nmbr: '12345' }] },
-            { pc_id: 3, pc_number: 3, student_count: 0, students: [] },
-            { pc_id: 4, pc_number: 4, student_count: 0, students: [] }
-        ];
-
-        function showResult(elementId, message, type = 'success') {
-            const element = document.getElementById(elementId);
-            const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'exclamation-triangle';
-            const bgClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-warning';
-            
-            element.innerHTML = `
-                <div class="alert ${bgClass}">
-                    <i class="fas fa-${icon} me-2"></i>
-                    ${message}
-                </div>
-            `;
-        }
-
-        function testPCCards() {
-            console.log('🧪 Test 1: PC Kartları Oluşturma başlatılıyor...');
-            try {
-                const container = document.getElementById('pc-cards-container');
-                container.innerHTML = '';
-                
-                testPCs.forEach(pc => {
-                    const isOccupied = pc.student_count > 0;
-                    const statusClass = isOccupied ? 'border-danger' : 'border-success';
-                    const statusText = isOccupied ? 'Dolu' : 'Boş';
-                    const statusIcon = isOccupied ? 'fas fa-user' : 'fas fa-desktop';
-                    
-                    const pcDisplayNumber = `PC${pc.pc_number.toString().padStart(2, '0')}`;
-                    const pcId = pc.pc_id || pc.pc_number;
-                    
-                    const cardHTML = `
-                        <div class="card ${statusClass} mb-2" style="width: 200px; display: inline-block; margin: 10px;">
-                            <div class="card-body text-center">
-                                <h5 class="card-title">${pcDisplayNumber}</h5>
-                                <p class="card-text">
-                                    <i class="${statusIcon}"></i> ${statusText}
-                                </p>
-                                <button class="btn btn-primary btn-sm" onclick="testAssignStudent(${pcId}, ${pc.pc_number})">
-                                    <i class="fas fa-user-plus"></i> Ata
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    container.innerHTML += cardHTML;
-                });
-                
-                testResults.test1 = true;
-                showResult('test1-result', `PC kartları başarıyla oluşturuldu! (${testPCs.length} kart)`, 'success');
-                updateOverallResult();
-                
-            } catch (error) {
-                testResults.test1 = false;
-                showResult('test1-result', `Hata: ${error.message}`, 'error');
-                updateOverallResult();
-            }
-        }
-
-        function testPCIds() {
-            console.log('🧪 Test 2: PC ID Kontrolü başlatılıyor...');
-            
-            try {
-                const pcCards = document.querySelectorAll('#pc-cards-container .card');
-                let allValid = true;
-                let errorMessage = '';
-                
-                pcCards.forEach((card, index) => {
-                    const pcId = card.querySelector('button')?.getAttribute('onclick')?.match(/testAssignStudent\(([^,]+),/)?.[1];
-                    
-                    if (!pcId || pcId === 'undefined' || pcId === 'null') {
-                        allValid = false;
-                        errorMessage += `Kart ${index + 1}: PC ID geçersiz (${pcId})<br>`;
-                    }
-                });
-                
-                if (allValid) {
-                    testResults.test2 = true;
-                    showResult('test2-result', `Tüm PC ID'leri geçerli! (${pcCards.length} kart kontrol edildi)`, 'success');
-                } else {
-                    testResults.test2 = false;
-                    showResult('test2-result', `Hata: ${errorMessage}`, 'error');
-                }
-                
-                updateOverallResult();
-                
-            } catch (error) {
-                testResults.test2 = false;
-                showResult('test2-result', `Hata: ${error.message}`, 'error');
-                updateOverallResult();
-            }
-        }
-
-        function testModal() {
-            console.log('🧪 Test 3: Modal Açma başlatılıyor...');
-            
-            try {
-                // Test modal'ı oluştur
-                const testModal = document.createElement('div');
-                testModal.className = 'modal fade';
-                testModal.innerHTML = `
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Test Modal</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <p>Test modal'ı başarıyla açıldı!</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                document.body.appendChild(testModal);
-                const modal = new bootstrap.Modal(testModal);
-                modal.show();
-                
-                testModal.addEventListener('hidden.bs.modal', function() {
-                    document.body.removeChild(testModal);
-                });
-                
-                testResults.test3 = true;
-                showResult('test3-result', 'Modal başarıyla açıldı!', 'success');
-                updateOverallResult();
-                
-            } catch (error) {
-                testResults.test3 = false;
-                showResult('test3-result', `Hata: ${error.message}`, 'error');
-                updateOverallResult();
-            }
-        }
-
-        function testAssignStudent(pcId, pcNumber) {
-            console.log('🧪 Test Assign Student:', pcId, pcNumber);
-            alert(`Test Atama: PC ID: ${pcId}, PC No: ${pcNumber}`);
-        }
-
-        function testAssignment() {
-            console.log('🧪 Test 4: Atama İşlemi başlatılıyor...');
-            
-            try {
-                const testData = {
-                    pcId: 1,
-                    pcNumber: 1,
-                    labId: 1,
-                    studentIds: [1, 2, 3]
-                };
-                
-                console.log('Test atama verileri:', testData);
-                
-                if (testData.pcId && testData.pcNumber && testData.labId && testData.studentIds.length > 0) {
-                    testResults.test4 = true;
-                    showResult('test4-result', `Atama işlemi test verileri geçerli! (${testData.studentIds.length} öğrenci)`, 'success');
-                } else {
-                    testResults.test4 = false;
-                    showResult('test4-result', 'Atama test verileri geçersiz!', 'error');
-                }
-                
-                updateOverallResult();
-                
-            } catch (error) {
-                testResults.test4 = false;
-                showResult('test4-result', `Hata: ${error.message}`, 'error');
-                updateOverallResult();
-            }
-        }
-
-        function updateOverallResult() {
-            const totalTests = Object.keys(testResults).length;
-            const passedTests = Object.values(testResults).filter(result => result === true).length;
-            const failedTests = totalTests - passedTests;
-            
-            let resultHTML = `
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="alert alert-success">
-                            <i class="fas fa-check-circle me-2"></i>
-                            Geçen Testler: ${passedTests}/${totalTests}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="alert ${failedTests > 0 ? 'alert-danger' : 'alert-success'}">
-                            <i class="fas fa-${failedTests > 0 ? 'times-circle' : 'check-circle'} me-2"></i>
-                            Başarısız Testler: ${failedTests}/${totalTests}
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            if (passedTests === totalTests) {
-                resultHTML += `
-                    <div class="alert alert-success mt-3">
-                        <i class="fas fa-trophy me-2"></i>
-                        <strong>Tüm testler başarılı! Atama sistemi çalışıyor.</strong>
-                    </div>
-                `;
-            } else {
-                resultHTML += `
-                    <div class="alert alert-warning mt-3">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Bazı testler başarısız. Lütfen hataları kontrol edin.</strong>
-                    </div>
-                `;
-            }
-            
-            document.getElementById('overall-result').innerHTML = resultHTML;
-        }
-
-
         // Sayfa yüklendiğinde test butonunu kontrol et
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🔍 Dashboard yüklendi, test butonu kontrol ediliyor...');
@@ -1227,3 +1253,4 @@ try {
     </script>
 </body>
 </html>
+

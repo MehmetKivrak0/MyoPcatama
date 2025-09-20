@@ -333,6 +333,8 @@ body::before {
     background: #f7fafc;
     color: #4a5568;
     border: 1px solid #e2e8f0;
+    pointer-events: auto;
+    cursor: pointer;
     padding: 12px 18px;
     border-radius: 8px;
     font-size: 0.95rem;
@@ -794,6 +796,7 @@ body::before {
     border: 1px solid var(--glass-border);
     border-radius: 15px;
     box-shadow: 0 10px 40px rgba(30, 58, 95, 0.3);
+    white-space: pre-line;
 }
 
 .toast.bg-success {
@@ -1256,7 +1259,7 @@ body::before {
     }
     
     .pc-card-header {
-        gap: 0.6rem;
+        gap: 1rem;
     }
     
     .pc-number {
@@ -1264,9 +1267,10 @@ body::before {
     }
     
     .pc-status {
-        padding: 5px 10px;
+        padding: 6px 12px;
         font-size: 0.8rem;
-        min-width: 90px;
+        min-width: 110px;
+        overflow: visible;
     }
     
     .pc-card-body {
@@ -1387,7 +1391,7 @@ body::before {
     }
     
     .pc-card-header {
-        gap: 0.5rem;
+        gap: 0.8rem;
     }
     
     .pc-number {
@@ -1395,9 +1399,10 @@ body::before {
     }
     
     .pc-status {
-        padding: 4px 8px;
+        padding: 5px 10px;
         font-size: 0.75rem;
-        min-width: 80px;
+        min-width: 100px;
+        overflow: visible;
     }
     
     .pc-card-body {
@@ -2017,7 +2022,7 @@ html {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 4rem;
+    gap: 1rem;
     position: relative;
     z-index: 2;
     text-align: center;
@@ -2036,17 +2041,17 @@ html {
 .pc-status {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 8px 16px;
-    border-radius: 8px;
+    gap: 0.5rem;
+    border-radius: 8px,16px;
     font-size: 0.9rem;
     font-weight: 600;
     transition: all 0.2s ease;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     justify-content: center;
     white-space: nowrap;
-    min-width: 120px;
+    min-width: 180px;
+    width: auto;
 }
 
 .pc-card.available .pc-status {
@@ -2554,8 +2559,9 @@ html {
     .pc-status {
         padding: 10px 16px;
         font-size: 0.9rem;
-        min-width: 140px;
+        min-width: 160px;
         justify-content: center;
+        overflow: visible;
     }
     
     .pc-card-body {
@@ -2624,7 +2630,7 @@ html {
     }
     
     .pc-card-header {
-        gap: 0.8rem;
+        gap: 1rem;
         margin-bottom: 0.8rem;
     }
     
@@ -2635,7 +2641,8 @@ html {
     .pc-status {
         padding: 8px 14px;
         font-size: 0.85rem;
-        min-width: 120px;
+        min-width: 140px;
+        overflow: visible;
     }
     
     .pc-card-body {
@@ -2696,7 +2703,7 @@ html {
     }
     
     .pc-card-header {
-        gap: 0.6rem;
+        gap: 0.8rem;
         margin-bottom: 0.6rem;
     }
     
@@ -2707,7 +2714,8 @@ html {
     .pc-status {
         padding: 6px 12px;
         font-size: 0.8rem;
-        min-width: 100px;
+        min-width: 120px;
+        overflow: visible;
     }
     
     .pc-card-body {
@@ -3013,7 +3021,8 @@ html {
     .pc-status {
         padding: 5px 10px;
         font-size: 0.75rem;
-        min-width: 90px;
+        min-width: 110px;
+        overflow: visible;
     }
     
     .empty-pc i {

@@ -21,7 +21,8 @@ function exportAssignments() {
     showToast('Atamalar hazırlanıyor...', 'info', 'Dışa Aktarma');
     
     // AJAX ile laboratuvar atamalarını dışa aktar
-    fetch(`../controllers/AssignmentController.php?action=export_lab_assignments&computer_id=${selectedLabId}`, {
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/controllers/AssignmentController.php?action=export_lab_assignments&computer_id=${selectedLabId}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -73,7 +74,8 @@ function exportLabAssignments(labId, labName) {
     showToast(`${labName} atamaları hazırlanıyor...`, 'info', 'Dışa Aktarma');
     
     // AJAX ile laboratuvar atamalarını dışa aktar
-    fetch(`../controllers/AssignmentController.php?action=export_lab_assignments&computer_id=${labId}`, {
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/controllers/AssignmentController.php?action=export_lab_assignments&computer_id=${labId}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -123,7 +125,8 @@ function exportAssignmentStats() {
     showToast('Atama istatistikleri hazırlanıyor...', 'info', 'Dışa Aktarma');
     
     // AJAX ile atama istatistiklerini dışa aktar
-    fetch('../controllers/AssignmentController.php?action=export_assignment_stats', {
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/controllers/AssignmentController.php?action=export_assignment_stats`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',

@@ -50,7 +50,7 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     border: 1px solid #e8ecf0;
     transition: all 0.2s ease;
-    height: 180px; /* Daha kompakt yükseklik */
+    height: 220px; /* Yeni bilgiler için daha yüksek */
     display: flex;
     flex-direction: column; /* Dikey düzen */
     position: relative;
@@ -297,7 +297,7 @@
     }
     
     .student-card {
-        height: 180px;
+        height: 200px; /* Mobil için de yükseklik artırıldı */
         padding: 16px;
     }
     
@@ -374,7 +374,7 @@
     }
     
     .student-card {
-        height: 160px;
+        height: 180px; /* Küçük mobil için de yükseklik artırıldı */
         padding: 14px;
     }
     

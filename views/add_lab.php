@@ -15,14 +15,10 @@ $messageType = '';
 if ($_POST) {
     require_once '../controllers/LabController.php';
     
-    $labName = trim($_POST['lab_name'] ?? '');
     $pcCount = intval($_POST['pc_count'] ?? 0);
     $userType = trim($_POST['user_type'] ?? '');
     
-    if (empty($labName)) {
-        $message = 'Laboratuvar adı boş olamaz.';
-        $messageType = 'error';
-    } elseif ($pcCount < 1 || $pcCount > 100) {
+    if ($pcCount < 1 || $pcCount > 100) {
         $message = 'PC sayısı 1-100 arasında olmalıdır.';
         $messageType = 'error';
     } elseif (empty($userType)) {
@@ -30,14 +26,19 @@ if ($_POST) {
         $messageType = 'error';
     } else {
         $labController = new LabController();
+        // Laboratuvar adını otomatik oluştur
+        $cleanType = preg_replace('/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/', '', $userType);
+        $labName = 'Lab_' . $cleanType;
+        
         $result = $labController->createLabWithPcs($labName, $pcCount, $userType);
         
         $message = $result['message'];
         $messageType = $result['type'];
         
         if ($result['type'] === 'success') {
-            // Başarılı olursa formu temizle
-            $_POST = [];
+            // Başarılı olursa dashboard'a yönlendir
+            header('Location: dashboard.php');
+            exit;
         }
     }
 }
@@ -552,6 +553,317 @@ if ($_POST) {
                 font-size: 0.85rem;
             }
         }
+
+        /* ========================================
+           CUSTOM CONFIRMATION MODAL STYLES
+           ======================================== */
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .modal-container {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow: hidden;
+            animation: slideIn 0.4s ease-out;
+            border: 2px solid #34495e;
+            position: relative;
+        }
+        
+        .modal-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            animation: shimmer 2s infinite;
+        }
+        
+        .modal-header {
+            padding: 2rem 2rem 1rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .modal-title {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #ffffff;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .modal-body {
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .modal-question {
+            font-size: 1.2rem;
+            color: #ecf0f1;
+            margin-bottom: 2rem;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+        
+        .modal-details {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #bdc3c7;
+            font-size: 1rem;
+        }
+        
+        .detail-value {
+            font-weight: 700;
+            color: #3498db;
+            font-size: 1.1rem;
+            background: rgba(52, 152, 219, 0.1);
+            padding: 0.3rem 0.8rem;
+            border-radius: 8px;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+        
+        .modal-footer {
+            padding: 1.5rem 2rem 2rem 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+        
+        .modal-footer .btn {
+            min-width: 120px;
+            height: 50px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-cancel {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            border: none;
+            color: white;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+        }
+        
+        .btn-cancel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+            background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+        }
+        
+        .btn-confirm {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            border: none;
+            color: white;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+        }
+        
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.4);
+            background: linear-gradient(135deg, #229954 0%, #1e8449 100%);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Modal Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px) scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+        
+        /* Modal Ripple Effect */
+        .modal-footer .btn::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .modal-footer .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        /* Mobile Responsive Modal */
+        @media (max-width: 768px) {
+            .modal-container {
+                width: 95%;
+                margin: 1rem;
+            }
+            
+            .modal-header {
+                padding: 1.5rem 1.5rem 1rem 1.5rem;
+            }
+            
+            .modal-title {
+                font-size: 1.5rem;
+            }
+            
+            .modal-body {
+                padding: 1.5rem;
+            }
+            
+            .modal-question {
+                font-size: 1.1rem;
+            }
+            
+            .modal-details {
+                padding: 1.2rem;
+            }
+            
+            .detail-item {
+                padding: 0.6rem 0;
+            }
+            
+            .detail-label {
+                font-size: 0.9rem;
+            }
+            
+            .detail-value {
+                font-size: 1rem;
+                padding: 0.2rem 0.6rem;
+            }
+            
+            .modal-footer {
+                padding: 1rem 1.5rem 1.5rem 1.5rem;
+                flex-direction: column;
+            }
+            
+            .modal-footer .btn {
+                width: 100%;
+                min-width: auto;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .modal-container {
+                width: 98%;
+                margin: 0.5rem;
+            }
+            
+            .modal-header {
+                padding: 1.2rem 1rem 0.8rem 1rem;
+            }
+            
+            .modal-title {
+                font-size: 1.3rem;
+            }
+            
+            .modal-body {
+                padding: 1.2rem;
+            }
+            
+            .modal-question {
+                font-size: 1rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .modal-details {
+                padding: 1rem;
+            }
+            
+            .detail-item {
+                padding: 0.5rem 0;
+            }
+            
+            .detail-label {
+                font-size: 0.85rem;
+            }
+            
+            .detail-value {
+                font-size: 0.9rem;
+                padding: 0.2rem 0.5rem;
+            }
+            
+            .modal-footer {
+                padding: 0.8rem 1rem 1.2rem 1rem;
+            }
+            
+            .modal-footer .btn {
+                height: 45px;
+                font-size: 0.95rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -561,7 +873,7 @@ if ($_POST) {
             <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
                 <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" style="width: 35px; height: auto; margin-right: 10px;">
                 <div class="brand-text">
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #fff;">MyoPC</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #fff;">Pc-Atama</div>
                     <div class="d-none d-md-block" style="font-size: 0.9rem; opacity: 0.9;">Laboratuvar Ekle</div>
                     <div class="d-block d-md-none" style="font-size: 0.8rem; opacity: 0.9;">Lab Ekle</div>
                 </div>
@@ -621,22 +933,34 @@ if ($_POST) {
                             <?php endif; ?>
                             
                             <form method="POST" action="" id="labForm">
-                                <div class="row">
+                            <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group">
-                                            <label for="lab_name" class="form-label">
-                                                <i class="fas fa-building"></i>Laboratuvar Adı
+                                            <label for="user_type" class="form-label">
+                                                <i class="fas fa-user-tag"></i>Laboratuvar Adı Giriniz
                                             </label>
                                             <input type="text" 
                                                    class="form-control" 
-                                                   id="lab_name" 
-                                                   name="lab_name" 
-                                                   value="<?php echo htmlspecialchars($_POST['lab_name'] ?? ''); ?>"
-                                                   placeholder="Örn: Bilgisayar Laboratuvarı 1" 
+                                                   id="user_type" 
+                                                   name="user_type" 
+                                                   value="<?php echo htmlspecialchars($_POST['user_type'] ?? ''); ?>"
+                                                   placeholder="Örn: Mekanik, Veri/Analistliği, Bilgisayar Progrmacılığı" 
                                                    required>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">
+                                                <i class="fas fa-info-circle"></i>Format Önizleme
+                                            </label>
+                                            <div class="form-control" style="background-color: #f8f9fa; font-weight: bold; color: #667eea;" id="formatPreview">
+                                                Laboratuvar Adı  ve PC sayısını girin
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
                                         <div class="form-group">
                                             <label for="pc_count" class="form-label">
                                                 <i class="fas fa-desktop"></i>PC Sayısı
@@ -654,32 +978,7 @@ if ($_POST) {
                                     </div>
                                 </div>
                                 
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="user_type" class="form-label">
-                                                <i class="fas fa-user-tag"></i>Kullanıcı Tipi
-                                            </label>
-                                            <input type="text" 
-                                                   class="form-control" 
-                                                   id="user_type" 
-                                                   name="user_type" 
-                                                   value="<?php echo htmlspecialchars($_POST['user_type'] ?? ''); ?>"
-                                                   placeholder="Örn: admin, öğretmen, öğrenci" 
-                                                   required>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label class="form-label">
-                                                <i class="fas fa-info-circle"></i>Format Önizleme
-                                            </label>
-                                            <div class="form-control" style="background-color: #f8f9fa; font-weight: bold; color: #667eea;" id="formatPreview">
-                                                Kullanıcı tipi ve PC sayısını girin
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                
                                 
                                 
                                 <!-- PC Önizleme -->
@@ -708,6 +1007,42 @@ if ($_POST) {
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmationModal" class="modal-overlay" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title">LOCALHOST WEB SİTESİNİN MESAJI</h3>
+            </div>
+            <div class="modal-body">
+                <p class="modal-question">Laboratuvar oluşturmak istediğinizden emin misiniz?</p>
+                <div class="modal-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Format:</span>
+                        <span class="detail-value" id="modalFormat">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Kullanıcı Tipi:</span>
+                        <span class="detail-value" id="modalUserType">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">PC Sayısı:</span>
+                        <span class="detail-value" id="modalPcCount">-</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-cancel" id="cancelBtn">
+                    <i class="fas fa-times"></i>
+                    İptal
+                </button>
+                <button type="button" class="btn btn-confirm" id="confirmBtn">
+                    <i class="fas fa-check"></i>
+                    Onayla
+                </button>
             </div>
         </div>
     </div>
@@ -786,8 +1121,8 @@ if ($_POST) {
             if (userType && pcCount > 0) {
                 // Kullanıcı tipini temizle ve formatla (boşlukları kaldır, küçük harfe çevirme)
                 const cleanType = userType.replace(/\s+/g, '').replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '');
-                const prefix = `Bil_${cleanType}`;
-                const fullFormat = `${prefix}-PC${pcCount}`;
+                const prefix = `Lab_${cleanType}`;
+                const fullFormat = `${prefix}`;
                 
                 // PC numarası kontrolü yap
                 try {
@@ -824,14 +1159,14 @@ if ($_POST) {
                 
                 // Kullanıcı tipini temizle ve formatla (boşlukları kaldır, küçük harfe çevirme)
                 const cleanType = userType.replace(/\s+/g, '').replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '');
-                const prefix = `Bil_${cleanType}`;
+                const prefix = `Lab_${cleanType}`;
                 
                 // İlk 10 PC'yi göster
                 const showCount = Math.min(pcCount, 10);
                 for (let i = 1; i <= showCount; i++) {
                     const pcItem = document.createElement('span');
                     pcItem.className = 'pc-item';
-                    pcItem.textContent = `${prefix}-PC${i}`;
+                    pcItem.textContent = `${prefix}`;
                     pcList.appendChild(pcItem);
                 }
                 
@@ -847,16 +1182,7 @@ if ($_POST) {
         });
         
         
-        // Laboratuvar adı değiştiğinde önizleme güncelle
-        document.getElementById('lab_name').addEventListener('input', function() {
-            // Boşlukları kaldır
-            this.value = this.value.replace(/\s+/g, '');
-            
-            const pcCount = parseInt(document.getElementById('pc_count').value);
-            if (pcCount > 0) {
-                document.getElementById('pc_count').dispatchEvent(new Event('input'));
-            }
-        });
+        // Laboratuvar adı otomatik oluşturulduğu için bu event listener kaldırıldı
         
         // Kullanıcı tipi input'unda boşlukları kaldır
         document.getElementById('user_type').addEventListener('input', function() {
@@ -870,51 +1196,103 @@ if ($_POST) {
             }
         });
         
+        // Custom Modal Functions
+        function showConfirmationModal(format, userType, pcCount) {
+            const modal = document.getElementById('confirmationModal');
+            const modalFormat = document.getElementById('modalFormat');
+            const modalUserType = document.getElementById('modalUserType');
+            const modalPcCount = document.getElementById('modalPcCount');
+            
+            // Update modal content
+            modalFormat.textContent = format;
+            modalUserType.textContent = userType;
+            modalPcCount.textContent = pcCount;
+            
+            // Show modal
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            // Return a promise that resolves with the user's choice
+            return new Promise((resolve) => {
+                const confirmBtn = document.getElementById('confirmBtn');
+                const cancelBtn = document.getElementById('cancelBtn');
+                
+                const handleConfirm = () => {
+                    hideConfirmationModal();
+                    resolve(true);
+                };
+                
+                const handleCancel = () => {
+                    hideConfirmationModal();
+                    resolve(false);
+                };
+                
+                // Remove existing event listeners
+                confirmBtn.replaceWith(confirmBtn.cloneNode(true));
+                cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+                
+                // Add new event listeners
+                document.getElementById('confirmBtn').addEventListener('click', handleConfirm);
+                document.getElementById('cancelBtn').addEventListener('click', handleCancel);
+                
+                // Close on overlay click
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        handleCancel();
+                    }
+                });
+                
+                // Close on Escape key
+                const handleEscape = (e) => {
+                    if (e.key === 'Escape') {
+                        handleCancel();
+                        document.removeEventListener('keydown', handleEscape);
+                    }
+                };
+                document.addEventListener('keydown', handleEscape);
+            });
+        }
+        
+        function hideConfirmationModal() {
+            const modal = document.getElementById('confirmationModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+        
         // Form validasyonu
-        document.getElementById('labForm').addEventListener('submit', function(e) {
-            const labName = document.getElementById('lab_name').value.trim();
+        document.getElementById('labForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
             const pcCount = parseInt(document.getElementById('pc_count').value);
             const userType = document.getElementById('user_type').value;
             const submitBtn = document.querySelector('button[type="submit"]');
             
-            if (!labName) {
-                alert('Laboratuvar adı boş olamaz.');
-                e.preventDefault();
-                return;
-            }
-            
             if (pcCount < 1 || pcCount > 100) {
                 alert('PC sayısı 1-100 arasında olmalıdır.');
-                e.preventDefault();
                 return;
             }
             
             if (!userType) {
                 alert('Kullanıcı tipi seçilmelidir.');
-                e.preventDefault();
                 return;
             }
             
             // Format oluştur (boşlukları kaldır, küçük harfe çevirme)
             const cleanType = userType.replace(/\s+/g, '').replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '');
-            const prefix = `Bil_${cleanType}`;
-            const format = `${prefix}-PC${pcCount}`;
+            const prefix = `Lab_${cleanType}`;
+            const format = `${prefix}`;
             
-            // Onay mesajı
-            if (!confirm(`${labName} laboratuvarını oluşturmak istediğinizden emin misiniz?\n\nFormat: ${format}\nKullanıcı Tipi: ${userType}\nPC Sayısı: ${pcCount}`)) {
-                e.preventDefault();
-                return;
+            // Show custom confirmation modal
+            const confirmed = await showConfirmationModal(format, userType, pcCount);
+            
+            if (confirmed) {
+                // Loading state
+                submitBtn.classList.add('loading');
+                submitBtn.disabled = true;
+                
+                // Submit the form
+                this.submit();
             }
-            
-            // Loading state
-            submitBtn.classList.add('loading');
-            submitBtn.disabled = true;
-            
-            // Simulate loading time (remove this in production)
-            setTimeout(() => {
-                submitBtn.classList.remove('loading');
-                submitBtn.disabled = false;
-            }, 2000);
         });
         
         // Button click effects

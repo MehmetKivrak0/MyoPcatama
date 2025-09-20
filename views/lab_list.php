@@ -601,7 +601,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     <div class="logo-section d-flex align-items-center">
                         <img src="../assets/image/logo/xrlogo.ico" alt="MyOPC" class="header-logo">
                         <div class="logo-text">
-                            <div class="brand-name">MyOPC</div>
+                            <div class="brand-name">PC-Atama</div>
                             <div class="brand-subtitle d-none d-md-block">Laboratuvar Listesi</div>
                             <div class="brand-subtitle d-block d-md-none">Lab Listesi</div>
                         </div>

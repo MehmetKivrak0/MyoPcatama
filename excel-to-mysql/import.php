@@ -26,11 +26,11 @@ class ExcelImporter {
             
             // Sütun sayısını kontrol et
             $columnCount = count($header);
-            if ($columnCount !== 4) {
+            if ($columnCount !== 6) {
                 return [
                     'success' => false,
-                    'message' => "❌ Excel dosyasında 4 sütun olmalıdır. Bulunan sütun sayısı: {$columnCount}",
-                    'errors' => ["Excel dosyasında {$columnCount} sütun bulundu. Sadece 4 sütun (Öğrenci No, Ad, Soyad, Akademik Yıl) kabul edilir."]
+                    'message' => "❌ Excel dosyasında 6 sütun olmalıdır. Bulunan sütun sayısı: {$columnCount}",
+                    'errors' => ["Excel dosyasında {$columnCount} sütun bulundu. Sadece 6 sütun (Öğrenci No, Ad, Soyad, Akademik Yıl, Bölüm, Sınıf Durumu) kabul edilir."]
                 ];
             }
             
@@ -50,7 +50,9 @@ class ExcelImporter {
                     'sdt_nmbr' => trim($row[0] ?? ''),
                     'first_name' => trim($row[1] ?? ''),
                     'last_name' => trim($row[2] ?? ''),
-                    'academic_year' => trim($row[3] ?? '')
+                    'academic_year' => trim($row[3] ?? ''),
+                    'department' => trim($row[4] ?? ''),
+                    'class_level' => trim($row[5] ?? '')
                 ];
                 
                 $validationResult = $this->validateStudentData($rawData, $rowNumber, $existingNumbers);
@@ -124,28 +126,28 @@ class ExcelImporter {
             // İlk satır başlık olduğu için atla
             $header = array_shift($rows);
             
-            // Sütun sayısını kontrol et (4 sütun olmalı)
+            // Sütun sayısını kontrol et (6 sütun olmalı)
             $columnCount = count($header);
-            if ($columnCount !== 4) {
+            if ($columnCount !== 6) {
                 return [
                     'success' => false,
-                    'message' => "❌ Excel dosyasında 4 sütun olmalıdır. Bulunan sütun sayısı: {$columnCount}",
+                    'message' => "❌ Excel dosyasında 6 sütun olmalıdır. Bulunan sütun sayısı: {$columnCount}",
                     'imported_count' => 0,
                     'duplicate_count' => 0,
                     'error_count' => 0,
                     'warning_count' => 0,
-                    'errors' => ["Excel dosyasında {$columnCount} sütun bulundu. Sadece 4 sütun (Öğrenci No, Ad, Soyad, Akademik Yıl) kabul edilir."],
+                    'errors' => ["Excel dosyasında {$columnCount} sütun bulundu. Sadece 6 sütun (Öğrenci No, Ad, Soyad, Akademik Yıl, Bölüm, Sınıf Durumu) kabul edilir."],
                     'warnings' => []
                 ];
             }
             
             // Sütun başlıklarını kontrol et
-            $expectedHeaders = ['Öğrenci No', 'Ad', 'Soyad', 'Akademik Yıl'];
+            $expectedHeaders = ['Öğrenci No', 'Ad', 'Soyad', 'Akademik Yıl', 'Bölüm', 'Sınıf Durumu'];
             $actualHeaders = array_map('trim', $header);
             
             // Başlık kontrolü
             $headerErrors = [];
-            for ($i = 0; $i < 4; $i++) {
+            for ($i = 0; $i < 6; $i++) {
                 if (empty($actualHeaders[$i])) {
                     $headerErrors[] = "Sütun " . ($i + 1) . " başlığı boş";
                 } elseif (strtolower($actualHeaders[$i]) !== strtolower($expectedHeaders[$i])) {
@@ -188,7 +190,9 @@ class ExcelImporter {
                         'sdt_nmbr' => TurkishCharacterHelper::fixTurkishCharacters(trim($row[0] ?? '')),
                         'first_name' => TurkishCharacterHelper::fixTurkishCharacters(trim($row[1] ?? '')),
                         'last_name' => TurkishCharacterHelper::fixTurkishCharacters(trim($row[2] ?? '')),
-                        'academic_year' => TurkishCharacterHelper::fixTurkishCharacters(trim($row[3] ?? ''))
+                        'academic_year' => TurkishCharacterHelper::fixTurkishCharacters(trim($row[3] ?? '')),
+                        'department' => TurkishCharacterHelper::fixTurkishCharacters(trim($row[4] ?? '')),
+                        'class_level' => TurkishCharacterHelper::fixTurkishCharacters(trim($row[5] ?? ''))
                     ];
                     
                     // Kapsamlı veri doğrulama
@@ -340,6 +344,50 @@ class ExcelImporter {
             }
         }
         
+        // 6. Bölüm Doğrulama
+        if (empty($rawData['department'])) {
+            $data['department'] = 'Belirtilmemiş'; // Varsayılan değer
+            $warnings[] = "⚠️ Satır {$rowNumber}: Bölüm boş, 'Belirtilmemiş' kullanıldı";
+        } else {
+            // Özel karakter kontrolü (sadece harf, boşluk, Türkçe karakterler)
+            if (!preg_match('/^[A-Za-zÇĞIİÖŞÜçğıiöşü\s]+$/', $rawData['department'])) {
+                $errors[] = "❌ Satır {$rowNumber}: Bölüm sadece harf içerebilir. Geçersiz karakter: '{$rawData['department']}'";
+            } else {
+                $data['department'] = TurkishCharacterHelper::cleanName($rawData['department']);
+            }
+        }
+        
+        // 7. Sınıf Durumu Doğrulama
+        if (empty($rawData['class_level'])) {
+            $data['class_level'] = 'Belirtilmemiş'; // Varsayılan değer
+            $warnings[] = "⚠️ Satır {$rowNumber}: Sınıf durumu boş, 'Belirtilmemiş' kullanıldı";
+        } else {
+            // Sınıf durumu kontrolü - "1. Sınıf", "2. Sınıf" gibi formatları kabul et
+            $classLevel = trim($rawData['class_level']);
+            
+            // Sınıf formatı kontrolü (1. Sınıf, 2. Sınıf, vb.)
+            if (preg_match('/^(\d+)\.\s*Sınıf$/i', $classLevel, $matches)) {
+                // "1. Sınıf", "2. Sınıf" formatını kabul et
+                $data['class_level'] = $matches[1] . '. Sınıf'; // Standart format
+            }
+            // Sadece rakam (1, 2, 3, vb.)
+            elseif (preg_match('/^\d+$/', $classLevel)) {
+                $data['class_level'] = $classLevel . '. Sınıf';
+            }
+            // Sadece harf ve Türkçe karakterler (mevcut kontrol)
+            elseif (preg_match('/^[A-Za-zÇĞIİÖŞÜçğıiöşü\s]+$/', $classLevel)) {
+                $data['class_level'] = TurkishCharacterHelper::cleanName($classLevel);
+            }
+            // Diğer geçerli formatlar (1.sınıf, 2.sınıf vb.)
+            elseif (preg_match('/^(\d+)\.?\s*sınıf$/i', $classLevel, $matches)) {
+                $data['class_level'] = $matches[1] . '. Sınıf';
+            }
+            // Geçersiz format
+            else {
+                $errors[] = "❌ Satır {$rowNumber}: Sınıf durumu geçersiz format. Geçerli formatlar: '1. Sınıf', '2. Sınıf', '1', '2' vb. Geçersiz değer: '{$rawData['class_level']}'";
+            }
+        }
+        
         return [
             'valid' => empty($errors),
             'data' => $data,
@@ -391,13 +439,15 @@ class ExcelImporter {
     }
     
     private function insertStudent($data) {
-        $sql = "INSERT INTO myopc_students (sdt_nmbr, full_name, academic_year, created_at, updated_at) 
-                VALUES (?, ?, ?, NOW(), NOW())";
+        $sql = "INSERT INTO myopc_students (sdt_nmbr, full_name, academic_year, department, class_level, created_at, updated_at) 
+                VALUES (?, ?, ?, ?, ?, NOW(), NOW())";
         
         $params = [
             $data['sdt_nmbr'],
             $data['full_name'],
-            $data['academic_year']
+            $data['academic_year'],
+            $data['department'],
+            $data['class_level']
         ];
         
         try {
@@ -576,6 +626,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <li><strong>B Sütunu:</strong> Ad</li>
                 <li><strong>C Sütunu:</strong> Soyad</li>
                 <li><strong>D Sütunu:</strong> Akademik Yıl (opsiyonel - boş bırakılırsa mevcut yıl kullanılır)</li>
+                <li><strong>E Sütunu:</strong> Bölüm (opsiyonel - boş bırakılırsa "Belirtilmemiş" kullanılır)</li>
+                <li><strong>F Sütunu:</strong> Sınıf Durumu (opsiyonel - boş bırakılırsa "Belirtilmemiş" kullanılır)</li>
             </ul>
             <p><em>Not: B ve C sütunları birleştirilerek full_name olarak kaydedilir.</em></p>
         </div>

@@ -76,9 +76,9 @@ class Pc {
      * Get all PCs
      */
     public function getAll() {
-        $sql = "SELECT c.*, l.name as lab_name FROM myopc_computers c 
-                LEFT JOIN myopc_labs l ON c.lab_id = l.id 
-                ORDER BY l.name ASC, c.name ASC";
+        $sql = "SELECT c.*, l.lab_name FROM myopc_computers c 
+                LEFT JOIN myopc_lab_computers l ON c.lab_id = l.computer_id 
+                ORDER BY l.lab_name ASC, c.name ASC";
         return $this->db->fetchAll($sql);
     }
     
@@ -87,10 +87,10 @@ class Pc {
      * Get available PCs
      */
     public function getAvailable() {
-        $sql = "SELECT c.*, l.name as lab_name FROM myopc_computers c 
-                LEFT JOIN myopc_labs l ON c.lab_id = l.id 
+        $sql = "SELECT c.*, l.lab_name FROM myopc_computers c 
+                LEFT JOIN myopc_lab_computers l ON c.lab_id = l.computer_id 
                 WHERE c.status = 'available' 
-                ORDER BY l.name ASC, c.name ASC";
+                ORDER BY l.lab_name ASC, c.name ASC";
         return $this->db->fetchAll($sql);
     }
     
@@ -99,12 +99,13 @@ class Pc {
      * Get assigned PCs
      */
     public function getAssigned() {
-        $sql = "SELECT c.*, l.name as lab_name, s.full_name as student_name 
-                FROM myopc_computers c 
-                LEFT JOIN myopc_labs l ON c.lab_id = l.id 
-                LEFT JOIN myopc_students s ON c.assigned_student_id = s.id 
-                WHERE c.status = 'assigned' 
-                ORDER BY l.name ASC, c.name ASC";
+        $sql = "SELECT p.*, l.lab_name, s.full_name as student_name 
+                FROM myopc_pcs p 
+                LEFT JOIN myopc_labs l ON p.lab_id = l.lab_id 
+                LEFT JOIN myopc_assignments a ON p.pc_id = a.pc_id
+                LEFT JOIN myopc_students s ON a.student_id = s.student_id 
+                WHERE a.assignment_id IS NOT NULL 
+                ORDER BY l.lab_name ASC, p.pc_number ASC";
         return $this->db->fetchAll($sql);
     }
     

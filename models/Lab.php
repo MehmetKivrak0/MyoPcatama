@@ -351,10 +351,11 @@ class Lab {
      */
     public function getMaxStudentsPerPC($labId) {
         try {
-            $sql = "SELECT max_students_per_pc FROM myopc_lab_computers WHERE id = ?";
+            $sql = "SELECT max_students_per_pc FROM myopc_lab_computers WHERE computer_id = ?";
             $result = $this->db->fetchOne($sql, [$labId]);
             return $result ? (int)$result['max_students_per_pc'] : 4; // Varsayılan 4
         } catch (Exception $e) {
+            error_log("getMaxStudentsPerPC hatası: " . $e->getMessage());
             return 4; // Varsayılan değer
         }
     }
@@ -364,10 +365,11 @@ class Lab {
      */
     public function updateMaxStudentsPerPC($labId, $maxStudents) {
         try {
-            $sql = "UPDATE myopc_lab_computers SET max_students_per_pc = ? WHERE id = ?";
+            $sql = "UPDATE myopc_lab_computers SET max_students_per_pc = ? WHERE computer_id = ?";
             $result = $this->db->execute($sql, [$maxStudents, $labId]);
             return $result;
         } catch (Exception $e) {
+            error_log("updateMaxStudentsPerPC hatası: " . $e->getMessage());
             return false;
         }
     }

@@ -3,21 +3,12 @@ session_start();
 
 // Zaten giriş yapmışsa dashboard'a yönlendir
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
-    header('Location: dashboard.php');
+    header('Location: iambatman.php');
     exit;
 }
 
 $error_message = '';
-
-// Mevcut kullanıcıları getir
-require_once '../config/db.php';
-$users = [];
-try {
-    $db = Database::getInstance();
-    $users = $db->fetchAll("SELECT user_id, full_name FROM myopc_users ORDER BY full_name ASC");
-} catch (Exception $e) {
-    error_log("Kullanıcı listesi alınamadı: " . $e->getMessage());
-}
+$success_message = '';
 
 if ($_POST) {
     require_once '../controllers/AuthController.php';
@@ -26,11 +17,12 @@ if ($_POST) {
     $password = $_POST['password'] ?? '';
     
     $auth = new AuthController();
-    $result = $auth->login($full_name, $password);
+    $result = $auth->register($full_name, $password);
     
     if ($result['type'] === 'success') {
-        header('Location: dashboard.php');
-        exit;
+        $success_message = $result['message'];
+        // 2 saniye sonra iambatman.php'ye yönlendir
+        header('refresh:2;url=iambatman.php');
     } else {
         $error_message = $result['message'];
     }
@@ -41,9 +33,8 @@ if ($_POST) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giriş - MyOPC</title>
+    <title>Kayıt Ol - MyOPC</title>
     <link rel="stylesheet" href="../assets/css/iambatman.css">
-    <link rel="stylesheet" href="../assets/css/photo-fix.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -68,18 +59,18 @@ if ($_POST) {
         </p>
         
         <div class="pagination">
-            <div class="pagination-dot active"></div>
             <div class="pagination-dot"></div>
+            <div class="pagination-dot active"></div>
             <div class="pagination-dot"></div>
         </div>
     </div>
 
-    <!-- Sağ taraf - Login Form -->
+    <!-- Sağ taraf - Registration Form -->
     <div class="login-section">
         <div class="login-card">
             <div class="form-header">
                 <div class="form-subtitle">ADMIN PANEL</div>
-                <h2 class="form-title">Şifre ile Giriş</h2>
+                <h2 class="form-title">Hesap Oluştur</h2>
             </div>
             
             <?php if ($error_message): ?>
@@ -88,19 +79,19 @@ if ($_POST) {
                 </div>
             <?php endif; ?>
             
+            <?php if ($success_message): ?>
+                <div class="alert-success">
+                    <?php echo htmlspecialchars($success_message); ?>
+                </div>
+            <?php endif; ?>
+            
             <form method="POST" action="">
                 <div class="form-group">
-                    <label for="full_name" class="form-label">Kullanıcı Seçin</label>
+                    <label for="full_name" class="form-label">Kullanıcı Adı</label>
                     <div class="input-container">
-                        <select id="full_name" name="full_name" class="form-control" required>
-                            <option value="">Kullanıcı seçin...</option>
-                            <?php foreach ($users as $user): ?>
-                                <option value="<?php echo htmlspecialchars($user['full_name']); ?>" 
-                                        <?php echo (isset($full_name) && $full_name === $user['full_name']) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($user['full_name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <input type="text" id="full_name" name="full_name" class="form-control" 
+                               placeholder="Kullanıcı adınızı girin" required
+                               value="<?php echo htmlspecialchars($full_name ?? ''); ?>">
                     </div>
                 </div>
                 
@@ -112,16 +103,27 @@ if ($_POST) {
                     </div>
                 </div>
                 
-                <button type="submit" class="btn-primary">GİRİŞ YAP</button>
+                
+                <button type="submit" class="btn-primary">HESAP OLUŞTUR</button>
                 
                 <div class="form-footer">
-                    <p>Hesabınız yok mu? <a href="iamloki.php" class="link">Kayıt olun</a></p>
+                    <p>Zaten hesabınız var mı? <a href="iambatman.php" class="link">Giriş yapın</a></p>
                 </div>
             </form>
         </div>
     </div>
 
     <style>
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+            font-size: 14px;
+        }
+        
         .form-footer {
             text-align: center;
             margin-top: 20px;
@@ -146,23 +148,6 @@ if ($_POST) {
         .input-container {
             position: relative;
         }
-        
-        select.form-control {
-            width: 100%;
-            padding: 12px 16px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            background-color: white;
-            cursor: pointer;
-        }
-        
-        select.form-control:focus {
-            outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-        }
-        
     </style>
 
 </body>

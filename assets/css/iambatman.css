@@ -64,6 +64,45 @@ body {
     width: 25px;
 }
 
+/* Photos Container Styles */
+.photos-container {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.photo-item {
+    position: relative;
+    overflow:hidden;
+    transition: all 0.3s ease;
+    width: 300px;
+    height: auto;
+}
+
+
+.photo-image {
+    width: 280px;
+    height: auto;
+    object-fit:fill;
+    transition: all 0.3s ease;
+    opacity: 2;
+    filter: none;
+}
+
+.photo-images{
+    width: 280px;
+    height: auto;
+    object-fit:fill;
+    transition: all 0.3s ease;
+    opacity: 2;
+    margin-top: 60px;
+    filter: none;
+
+
+}
+
 .brand-name {
     font-size: 2rem;
     font-weight: 700;
@@ -244,6 +283,15 @@ body {
     .pagination {
         position: static;
         margin-top: 2rem;
+    }
+    
+    .photos-container {
+        gap: 10px;
+    }
+    
+    .photo-item {
+        width: 60px;
+        height: 60px;
     }
 }
 

@@ -33,7 +33,7 @@ class Assignment {
                 ORDER BY s.full_name ASC
             ";
             $pcIdStart = $computerId * 100 + 1;
-            $pcIdEnd = $computerId * 100 + 999;
+            $pcIdEnd = $computerId * 100 + 99;
             return $this->db->fetchAll($sql, [$pcIdStart, $pcIdEnd]);
         } catch (Exception $e) {
             error_log("Laboratuvar öğrencileri alınırken hata: " . $e->getMessage());
@@ -120,11 +120,11 @@ class Assignment {
     }
     
     /**
-     * Öğrenci ataması yap
+     * Öğrenci ataması yap (Çoklu atama destekli)
      */
     public function assignStudent($studentId, $pcId, $computerId = null) {
         try {
-            error_log("🚀 === assignStudent BAŞLADI ===");
+            error_log("🚀 === assignStudent BAŞLADI (Çoklu Atama) ===");
             error_log("📋 Gelen parametreler - studentId: $studentId, pcId: $pcId, computerId: $computerId");
             
             // PC ID'si zaten doğru formatta geliyorsa (101, 102, 103...) direkt kullan
@@ -139,20 +139,20 @@ class Assignment {
                 error_log("📋 PC ID direkt kullanılıyor: $finalPcId");
             }
             
-            // Önce mevcut atamayı kontrol et
-            $checkSql = "SELECT assignment_id FROM myopc_assignments WHERE student_id = ?";
-            $existingAssignment = $this->db->fetchOne($checkSql, [$studentId]);
+            // Bu PC'ye zaten atanmış mı kontrol et
+            $checkSql = "SELECT assignment_id FROM myopc_assignments WHERE student_id = ? AND computer_id = ?";
+            $existingAssignment = $this->db->fetchOne($checkSql, [$studentId, $finalPcId]);
             
-            error_log("📋 Mevcut atama kontrolü - studentId: $studentId, existingAssignment: " . ($existingAssignment ? 'VAR' : 'YOK'));
+            error_log("📋 Bu PC'ye atama kontrolü - studentId: $studentId, pcId: $finalPcId, existingAssignment: " . ($existingAssignment ? 'VAR' : 'YOK'));
             
             if ($existingAssignment) {
-                // Mevcut atamayı güncelle
-                error_log("📋 Mevcut atama güncelleniyor - assignment_id: " . $existingAssignment['assignment_id']);
-                $updateSql = "UPDATE myopc_assignments SET computer_id = ?, updated_at = NOW() WHERE assignment_id = ?";
-                $result = $this->db->execute($updateSql, [$finalPcId, $existingAssignment['assignment_id']]);
+                // Bu PC'ye zaten atanmış, güncelle
+                error_log("📋 Bu PC'ye mevcut atama güncelleniyor - assignment_id: " . $existingAssignment['assignment_id']);
+                $updateSql = "UPDATE myopc_assignments SET updated_at = NOW() WHERE assignment_id = ?";
+                $result = $this->db->execute($updateSql, [$existingAssignment['assignment_id']]);
                 error_log("📋 Güncelleme sonucu: " . ($result ? 'BAŞARILI' : 'BAŞARISIZ'));
             } else {
-                // Yeni atama oluştur
+                // Yeni atama oluştur (çoklu atama destekli)
                 error_log("📋 Yeni atama oluşturuluyor - studentId: $studentId, finalPcId: $finalPcId");
                 $insertSql = "INSERT INTO myopc_assignments (student_id, computer_id, created_at, updated_at, created_by) VALUES (?, ?, NOW(), NOW() + INTERVAL 1 MINUTE, 'System')";
                 $result = $this->db->execute($insertSql, [$studentId, $finalPcId]);
@@ -168,12 +168,71 @@ class Assignment {
     }
     
     /**
-     * Öğrenci atamasını kaldır
+     * Öğrencinin tüm atamalarını getir
      */
-    public function unassignStudent($studentId, $computerId) {
+    public function getStudentAssignments($studentId) {
         try {
-            $sql = "DELETE FROM myopc_assignments WHERE student_id = ?";
-            return $this->db->execute($sql, [$studentId]);
+            $sql = "
+                SELECT 
+                    a.assignment_id,
+                    a.computer_id,
+                    a.created_at as assignment_date,
+                    l.lab_name,
+                    (a.computer_id % 100) as pc_number,
+                    FLOOR(a.computer_id / 100) as lab_id
+                FROM myopc_assignments a
+                LEFT JOIN myopc_lab_computers l ON FLOOR(a.computer_id / 100) = l.computer_id
+                WHERE a.student_id = ?
+                ORDER BY a.created_at DESC
+            ";
+            return $this->db->fetchAll($sql, [$studentId]);
+        } catch (Exception $e) {
+            error_log("Öğrenci atamaları alınırken hata: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Öğrencinin belirli bir laboratuvardaki atamasını kaldır
+     */
+    public function unassignStudentFromLab($studentId, $labId) {
+        try {
+            $sql = "DELETE FROM myopc_assignments WHERE student_id = ? AND computer_id BETWEEN ? AND ?";
+            $pcIdStart = $labId * 100 + 1;
+            $pcIdEnd = $labId * 100 + 99;
+            return $this->db->execute($sql, [$studentId, $pcIdStart, $pcIdEnd]);
+        } catch (Exception $e) {
+            error_log("Öğrenci laboratuvar ataması kaldırılırken hata: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Öğrencinin belirli bir PC'deki atamasını kaldır
+     */
+    public function unassignStudentFromPC($studentId, $pcId) {
+        try {
+            $sql = "DELETE FROM myopc_assignments WHERE student_id = ? AND computer_id = ?";
+            return $this->db->execute($sql, [$studentId, $pcId]);
+        } catch (Exception $e) {
+            error_log("Öğrenci PC ataması kaldırılırken hata: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Öğrenci atamasını kaldır (tüm atamaları)
+     */
+    public function unassignStudent($studentId, $computerId = null) {
+        try {
+            if ($computerId) {
+                // Belirli bir laboratuvardan kaldır
+                return $this->unassignStudentFromLab($studentId, $computerId);
+            } else {
+                // Tüm atamaları kaldır
+                $sql = "DELETE FROM myopc_assignments WHERE student_id = ?";
+                return $this->db->execute($sql, [$studentId]);
+            }
         } catch (Exception $e) {
             error_log("Öğrenci ataması kaldırılırken hata: " . $e->getMessage());
             return false;
@@ -209,7 +268,7 @@ class Assignment {
                 WHERE computer_id BETWEEN ? AND ?
             ";
             $pcIdStart = $computerId * 100 + 1;
-            $pcIdEnd = $computerId * 100 + 999; // Maksimum PC sayısı için geniş aralık
+            $pcIdEnd = $computerId * 100 + 99; // Maksimum PC sayısı için aralık
             $assignedStudents = $this->db->fetchOne($assignedStudentsSql, [$pcIdStart, $pcIdEnd])['count'];
             
             // Kullanılan PC sayısı
@@ -256,7 +315,7 @@ class Assignment {
             if ($labId) {
                 $whereConditions[] = "a.computer_id BETWEEN ? AND ?";
                 $pcIdStart = $labId * 100 + 1;
-                $pcIdEnd = $labId * 100 + 999;
+                $pcIdEnd = $labId * 100 + 99;
                 $params[] = $pcIdStart;
                 $params[] = $pcIdEnd;
             }
@@ -308,9 +367,9 @@ class Assignment {
     }
     
     /**
-     * Atama durumunu kontrol et
+     * Öğrencinin belirli bir laboratuvarda ataması var mı kontrol et
      */
-    public function isStudentAssigned($studentId, $computerId) {
+    public function isStudentAssignedToLab($studentId, $computerId) {
         try {
             // PC ID'leri computer_id * 100 + PC numarası formatında olduğu için aralık sorgusu yapıyoruz
             $sql = "
@@ -318,11 +377,72 @@ class Assignment {
                 WHERE student_id = ? AND computer_id BETWEEN ? AND ?
             ";
             $pcIdStart = $computerId * 100 + 1;
-            $pcIdEnd = $computerId * 100 + 999;
+            $pcIdEnd = $computerId * 100 + 99; // 99'a kadar, 999 değil
+            
+            // Debug: Özel kontrol
+            if ($studentId == 2) { // Ayşe Demir'in ID'si varsayımı
+                error_log("DEBUG isStudentAssignedToLab - studentId: $studentId, computerId: $computerId, pcIdStart: $pcIdStart, pcIdEnd: $pcIdEnd");
+                error_log("DEBUG isStudentAssignedToLab - SQL: $sql");
+            }
+            
             $result = $this->db->fetchOne($sql, [$studentId, $pcIdStart, $pcIdEnd]);
+            
+            // Debug: Sonuç
+            if ($studentId == 2) {
+                error_log("DEBUG isStudentAssignedToLab - SQL sonucu: " . ($result ? json_encode($result) : 'NULL'));
+            }
+            
             return $result ? $result['computer_id'] : false;
         } catch (Exception $e) {
+            error_log("Laboratuvar atama durumu kontrol edilirken hata: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Öğrencinin belirli bir laboratuvarda ataması var mı kontrol et (boolean döndürür)
+     */
+    public function isStudentAssignedToLabBoolean($studentId, $computerId) {
+        try {
+            $result = $this->isStudentAssignedToLab($studentId, $computerId);
+            $isAssigned = $result !== false;
+            
+            // Debug: Özel kontrol
+            if ($studentId == 2) { // Ayşe Demir'in ID'si varsayımı
+                error_log("DEBUG isStudentAssignedToLabBoolean - studentId: $studentId, computerId: $computerId, result: " . ($result ? $result : 'false') . ", isAssigned: " . ($isAssigned ? 'true' : 'false'));
+            }
+            
+            return $isAssigned;
+        } catch (Exception $e) {
+            error_log("Laboratuvar atama durumu boolean kontrol edilirken hata: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Öğrencinin herhangi bir laboratuvarda ataması var mı kontrol et
+     */
+    public function isStudentAssigned($studentId) {
+        try {
+            $sql = "SELECT COUNT(*) as count FROM myopc_assignments WHERE student_id = ?";
+            $result = $this->db->fetchOne($sql, [$studentId]);
+            return $result['count'] > 0;
+        } catch (Exception $e) {
             error_log("Atama durumu kontrol edilirken hata: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Öğrencinin belirli bir PC'ye atanıp atanmadığını kontrol et
+     */
+    public function isStudentAssignedToPC($studentId, $pcId) {
+        try {
+            $sql = "SELECT assignment_id FROM myopc_assignments WHERE student_id = ? AND computer_id = ?";
+            $result = $this->db->fetchOne($sql, [$studentId, $pcId]);
+            return $result ? true : false;
+        } catch (Exception $e) {
+            error_log("PC atama durumu kontrol edilirken hata: " . $e->getMessage());
             return false;
         }
     }
@@ -610,6 +730,8 @@ class Assignment {
                     s.full_name,
                     s.sdt_nmbr,
                     s.academic_year,
+                    s.department,
+                    s.class_level,
                     l.lab_name,
                     (a.computer_id % 100) as pc_number,
                     a.created_at
@@ -646,6 +768,8 @@ class Assignment {
                     s.full_name,
                     s.sdt_nmbr,
                     s.academic_year,
+                    s.department,
+                    s.class_level,
                     (a.computer_id % 100) as pc_number,
                     a.created_at
                 FROM myopc_assignments a

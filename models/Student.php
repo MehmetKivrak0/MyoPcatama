@@ -42,6 +42,74 @@ class Student {
     }
     
     /**
+     * Mevcut bölümleri getir
+     */
+    public function getAvailableDepartments() {
+        try {
+            $query = "SELECT DISTINCT department FROM myopc_students WHERE department IS NOT NULL AND department != '' ORDER BY department ASC";
+            $result = $this->db->query($query);
+            
+            if ($result) {
+                $departments = [];
+                while ($row = $result->fetch_assoc()) {
+                    $departments[] = $row;
+                }
+                return $departments;
+            } else {
+                // Eğer tablo yoksa varsayılan bölümleri döndür
+                return [
+                    ['department' => 'Bilgisayar Programcılığı'],
+                    ['department' => 'Elektrik'],
+                    ['department' => 'Makine'],
+                    ['department' => 'İnşaat']
+                ];
+            }
+        } catch (Exception $e) {
+            // Hata durumunda varsayılan bölümleri döndür
+            return [
+                ['department' => 'Bilgisayar Programcılığı'],
+                ['department' => 'Elektrik'],
+                ['department' => 'Makine'],
+                ['department' => 'İnşaat']
+            ];
+        }
+    }
+    
+    /**
+     * Mevcut sınıfları getir
+     */
+    public function getAvailableClasses() {
+        try {
+            $query = "SELECT DISTINCT class_level FROM myopc_students WHERE class_level IS NOT NULL AND class_level != '' ORDER BY class_level ASC";
+            $result = $this->db->query($query);
+            
+            if ($result) {
+                $classes = [];
+                while ($row = $result->fetch_assoc()) {
+                    $classes[] = $row;
+                }
+                return $classes;
+            } else {
+                // Eğer tablo yoksa varsayılan sınıfları döndür
+                return [
+                    ['class_level' => '1. Sınıf'],
+                    ['class_level' => '2. Sınıf'],
+                    ['class_level' => '3. Sınıf'],
+                    ['class_level' => '4. Sınıf']
+                ];
+            }
+        } catch (Exception $e) {
+            // Hata durumunda varsayılan sınıfları döndür
+            return [
+                ['class_level' => '1. Sınıf'],
+                ['class_level' => '2. Sınıf'],
+                ['class_level' => '3. Sınıf'],
+                ['class_level' => '4. Sınıf']
+            ];
+        }
+    }
+    
+    /**
      * Tüm öğrencileri getir
      */
     public function getAllStudents() {
@@ -94,12 +162,18 @@ class Student {
             $studentData['full_name'] = TurkishCharacterHelper::cleanName($studentData['full_name']);
             $studentData['sdt_nmbr'] = TurkishCharacterHelper::cleanText($studentData['sdt_nmbr']);
             
-            $query = "INSERT INTO myopc_students (sdt_nmbr, full_name, academic_year, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW() + INTERVAL 1 MINUTE)";
+            // Varsayılan değerleri ayarla
+            $department = isset($studentData['department']) ? TurkishCharacterHelper::cleanName($studentData['department']) : 'Belirtilmemiş';
+            $class_level = isset($studentData['class_level']) ? TurkishCharacterHelper::cleanName($studentData['class_level']) : 'Belirtilmemiş';
+            
+            $query = "INSERT INTO myopc_students (sdt_nmbr, full_name, academic_year, department, class_level, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW() + INTERVAL 1 MINUTE)";
             $stmt = $this->db->prepare($query);
-            $stmt->bind_param("ssi", 
+            $stmt->bind_param("ssiss", 
                 $studentData['sdt_nmbr'],
                 $studentData['full_name'],
-                $studentData['academic_year']
+                $studentData['academic_year'],
+                $department,
+                $class_level
             );
             
             if ($stmt->execute()) {
@@ -121,12 +195,18 @@ class Student {
             $studentData['full_name'] = TurkishCharacterHelper::cleanName($studentData['full_name']);
             $studentData['sdt_nmbr'] = TurkishCharacterHelper::cleanText($studentData['sdt_nmbr']);
             
-            $query = "UPDATE myopc_students SET sdt_nmbr = ?, full_name = ?, academic_year = ?, updated_at = NOW() WHERE student_id = ?";
+            // Varsayılan değerleri ayarla
+            $department = isset($studentData['department']) ? TurkishCharacterHelper::cleanName($studentData['department']) : 'Belirtilmemiş';
+            $class_level = isset($studentData['class_level']) ? TurkishCharacterHelper::cleanName($studentData['class_level']) : 'Belirtilmemiş';
+            
+            $query = "UPDATE myopc_students SET sdt_nmbr = ?, full_name = ?, academic_year = ?, department = ?, class_level = ?, updated_at = NOW() WHERE student_id = ?";
             $stmt = $this->db->prepare($query);
-            $stmt->bind_param("ssii", 
+            $stmt->bind_param("ssissi", 
                 $studentData['sdt_nmbr'],
                 $studentData['full_name'],
                 $studentData['academic_year'],
+                $department,
+                $class_level,
                 $id
             );
             
@@ -183,13 +263,23 @@ class Student {
     /**
      * Sayfalama ile öğrenci listesi getir
      */
-    public function getStudentsPaginated($offset, $limit, $year_filter = '', $search = '') {
+    public function getStudentsPaginated($offset, $limit, $year_filter = '', $search = '', $department_filter = '', $class_filter = '') {
         try {
             $where_conditions = [];
             $params = [];
             
             if (!empty($year_filter)) {
                 $where_conditions[] = "academic_year = " . intval($year_filter);
+            }
+            
+            if (!empty($department_filter)) {
+                $department_escaped = $this->db->getConnection()->real_escape_string($department_filter);
+                $where_conditions[] = "department = '{$department_escaped}'";
+            }
+            
+            if (!empty($class_filter)) {
+                $class_escaped = $this->db->getConnection()->real_escape_string($class_filter);
+                $where_conditions[] = "class_level = '{$class_escaped}'";
             }
             
             if (!empty($search)) {
@@ -219,12 +309,22 @@ class Student {
     /**
      * Toplam öğrenci sayısını getir
      */
-    public function getTotalStudents($year_filter = '', $search = '') {
+    public function getTotalStudents($year_filter = '', $search = '', $department_filter = '', $class_filter = '') {
         try {
             $where_conditions = [];
             
             if (!empty($year_filter)) {
                 $where_conditions[] = "academic_year = " . intval($year_filter);
+            }
+            
+            if (!empty($department_filter)) {
+                $department_escaped = $this->db->getConnection()->real_escape_string($department_filter);
+                $where_conditions[] = "department = '{$department_escaped}'";
+            }
+            
+            if (!empty($class_filter)) {
+                $class_escaped = $this->db->getConnection()->real_escape_string($class_filter);
+                $where_conditions[] = "class_level = '{$class_escaped}'";
             }
             
             if (!empty($search)) {

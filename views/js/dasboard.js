@@ -19,39 +19,106 @@ function openExcelImport() {
 }
 
 
-// Toast bildirimi göster
-function showToast(message, type = 'info', title = null) {
+// YENİ TOAST SİSTEMİ - SIFIRDAN
+function showToast(message, type = 'info', title = null, studentData = null) {
     const toast = document.getElementById('systemToast');
     const toastMessage = document.getElementById('toastMessage');
+    const toastTitle = document.querySelector('.toast-title span');
+    const toastIcon = document.querySelector('.toast-icon i');
     
-    // Eğer title verilmişse, mesajı daha detaylı göster
-    let displayMessage = message;
+    // Toast başlığını güncelle
     if (title) {
-        displayMessage = `<strong>${title}</strong><br>${message}`;
+        toastTitle.textContent = title;
+    } else {
+        toastTitle.textContent = 'Sistem Bildirimi';
+    }
+    
+    // İkonu güncelle
+    if (type === 'success') {
+        toastIcon.className = 'fas fa-check-circle';
+    } else if (type === 'error') {
+        toastIcon.className = 'fas fa-exclamation-circle';
+    } else if (type === 'warning') {
+        toastIcon.className = 'fas fa-exclamation-triangle';
+    } else {
+        toastIcon.className = 'fas fa-info-circle';
+    }
+    
+    // Mesaj içeriğini oluştur
+    let displayMessage = '';
+    
+    // Eğer öğrenci verisi varsa, yeni tasarımla formatla
+    if (studentData && typeof studentData === 'object') {
+        console.log('Öğrenci verisi:', studentData);
+        console.log('Bölüm:', studentData.department);
+        console.log('Yıl:', studentData.academic_year);
+        
+        displayMessage = `
+            <div class="student-info-new">
+                <div class="student-name-new">
+                    ${studentData.full_name || 'Bilinmeyen Öğrenci'}
+                </div>
+                <div class="student-details-new">
+                    <div class="student-detail-item-new number">
+                        <i class="fas fa-id-card"></i>
+                        <span><strong>Okul Numarası:</strong> ${studentData.sdt_nmbr || 'Belirtilmemiş'}</span>
+                    </div>
+                    <div class="student-detail-item-new year">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span><strong>Akademik Yıl:</strong> ${studentData.academic_year || 'Belirtilmemiş'}</span>
+                    </div>
+                    <div class="student-detail-item-new department">
+                        <i class="fas fa-building"></i>
+                        <span><strong>Bölüm:</strong> ${studentData.department || 'Belirtilmemiş'}</span>
+                    </div>
+                    <div class="student-detail-item-new class">
+                        <i class="fas fa-graduation-cap"></i>
+                        <span><strong>Sınıf:</strong> ${studentData.class_level || 'Belirtilmemiş'}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        // Basit mesaj için - kompakt tasarım
+        displayMessage = `
+            <div style="text-align: center; padding: 12px; background: white; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.1);">
+                <p style="margin: 0; font-size: 13px; color: #495057; line-height: 1.4;">${message}</p>
+            </div>
+        `;
     }
     
     // Toast içeriğini güncelle
     toastMessage.innerHTML = displayMessage;
     
-    // Toast tipine göre stil uygula
-    toast.className = 'toast';
-    if (type === 'success') {
-        toast.classList.add('bg-success', 'text-white');
-    } else if (type === 'error') {
-        toast.classList.add('bg-danger', 'text-white');
-        // Hata mesajlarını daha uzun göster
-        toast.setAttribute('data-bs-delay', '8000');
-    } else if (type === 'warning') {
-        toast.classList.add('bg-warning');
-        toast.setAttribute('data-bs-delay', '6000');
-    } else {
-        toast.classList.add('bg-info', 'text-white');
+    // Toast'ı göster
+    toast.classList.add('show');
+    
+    // Otomatik kapanma süresi
+    let delay = 5000; // 5 saniye varsayılan
+    if (type === 'error') delay = 8000;
+    if (type === 'warning') delay = 6000;
+    if (type === 'success') delay = 4000;
+    
+    // Mevcut timeout'u temizle
+    if (window.toastTimeout) {
+        clearTimeout(window.toastTimeout);
     }
     
-    // Toast'ı göster
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
+    // Yeni timeout ayarla
+    window.toastTimeout = setTimeout(() => {
+        hideToast();
+    }, delay);
+}
+
+// Toast'ı gizle
+function hideToast() {
+    const toast = document.getElementById('systemToast');
+    toast.classList.remove('show');
     
+    // Timeout'u temizle
+    if (window.toastTimeout) {
+        clearTimeout(window.toastTimeout);
+    }
 }
 
 // Sayfa yenilendiğinde animasyon
@@ -218,24 +285,26 @@ editMaxStudentsBtn.addEventListener('click', function() {
 
 // PC kartlarını yükle
 function loadPCCards(labId, labName) {
-    console.log('🔄 loadPCCards çağrıldı - labId:', labId, 'labName:', labName);
+    // console.log('🔄 loadPCCards çağrıldı - labId:', labId, 'labName:', labName);
     pcLoadingIndicator.style.display = 'block';
     pcCardsContainer.style.display = 'none';
     
     // AJAX ile PC verilerini getir
-    const url = `../controllers/AssignmentController.php?action=get_lab_pcs&lab_id=${labId}`;
-    console.log('📡 İstek URL:', url);
+    const baseUrl = window.location.origin + '/myopc';
+    const url = `${baseUrl}/controllers/AssignmentController.php?action=get_lab_pcs&lab_id=${labId}`;
+    // console.log('📡 İstek URL:', url);
     
     fetch(url)
         .then(response => {
-            console.log('📡 Response status:', response.status);
+            // console.log('📡 Response status:', response.status);
             return response.json();
         })
         .then(data => {
-            console.log('📡 Response data:', data);
+            // console.log('📡 Response data:', data);
             if (data.success) {
-                console.log('✅ PC verileri başarıyla yüklendi, PC sayısı:', data.pcs ? data.pcs.length : 0);
-                displayPCCards(data.pcs, labName, labId);
+                // console.log('✅ PC verileri başarıyla yüklendi, PC sayısı:', data.pcs ? data.pcs.length : 0);
+                const maxStudentsPerPC = data.maxStudentsPerPC || 4;
+                displayPCCards(data.pcs, labName, labId, maxStudentsPerPC);
             } else {
                 console.error('❌ PC verileri yüklenirken hata:', data.message);
                 showToast('PC verileri yüklenirken hata oluştu: ' + data.message, 'error');
@@ -246,14 +315,14 @@ function loadPCCards(labId, labName) {
             showToast('PC verileri yüklenirken bir hata oluştu', 'error');
         })
         .finally(() => {
-            console.log('🔄 Loading indicator kapatılıyor');
+            // console.log('🔄 Loading indicator kapatılıyor');
             pcLoadingIndicator.style.display = 'none';
         });
 }
 
 // PC kartlarını görüntüle
-function displayPCCards(pcs, labName, labId) {
-    console.log('🎨 displayPCCards çağrıldı - pcs:', pcs, 'labName:', labName, 'labId:', labId);
+function displayPCCards(pcs, labName, labId, maxStudentsPerPC = 4) {
+    console.log('🎨 displayPCCards çağrıldı - pcs:', pcs, 'labName:', labName, 'labId:', labId, 'maxStudentsPerPC:', maxStudentsPerPC);
     
     const pcCardsLabName = document.getElementById('pcCardsLabName');
     if (pcCardsLabName) {
@@ -328,13 +397,14 @@ function displayPCCards(pcs, labName, labId) {
                         <i class="${statusIcon}"></i>
                         <span>${statusText}</span>
                         ${isOccupied ? `<span class="student-count-badge">${studentCount}</span>` : ''}
+                        <span class="max-students-info">Max: ${maxStudentsPerPC}</span>
                     </div>
                 </div>
                 <div class="pc-card-body">
                     ${studentInfo}
                     ${!isOccupied ? '<div class="empty-pc"><i class="fas fa-plus-circle"></i><span>Öğrenci Atanabilir</span></div>' : ''}
                     <div class="pc-card-actions">
-                        <button class="action-btn update-btn" onclick="openPCUpdate(window.currentLabId, window.currentLabName)" title="PC Güncelle">
+                        <button class="action-btn update-btn" onclick="console.log('🔧 PC Güncelle butonu tıklandı', window.currentLabId, window.currentLabName); openPCUpdate(window.currentLabId, window.currentLabName)" title="PC Güncelle">
                             <i class="fas fa-edit"></i>
                         </button>
                         ${isOccupied ? `<button class="action-btn view-btn" onclick="viewPCDetails(${pcId}, '${pcNumber}')" title="PC Detayları"><i class="fas fa-eye"></i></button>` : ''}
@@ -386,7 +456,7 @@ function addStudentNameClickListeners() {
             const studentName = this.getAttribute('data-student-name');
             
             // Okul numarasını bildirim olarak göster
-            showToast(`Öğrenci: ${studentName}<br>Okul Numarası: ${studentNumber}`, 'info', 'Öğrenci Bilgisi');
+            showToast(`Öğrenci: ${studentName}\nOkul Numarası: ${studentNumber}`, 'info', 'Öğrenci Bilgisi');
         });
     });
 }
@@ -420,12 +490,34 @@ function viewPCDetails(pcId, pcNumber) {
     // Modal başlığını güncelle
     titleElement.textContent = `PC ${pcNumber} - Atanmış Öğrenciler`;
     
+    // Global PC değişkenlerini güncelle
+    window.currentPCId = pcId;
+    window.currentPCNumber = pcNumber;
+    // labId'yi mevcut seçili lab'dan al
+    const labSelector = document.getElementById('labSelector');
+    if (labSelector && labSelector.value) {
+        window.currentLabId = labSelector.value;
+    } else {
+        console.warn('⚠️ Lab seçili değil, labId null olarak ayarlanıyor');
+        window.currentLabId = null;
+    }
+    
     // PC detaylarını yükle
     loadPCDetails(pcId, pcNumber);
     
     // Modal'ı aç
     const modal = new bootstrap.Modal(modalElement);
     modal.show();
+    
+    // Modal kapatıldığında global değişkenleri temizle (refresh yapılmıyor)
+    // Önceki event listener'ı kaldır (varsa)
+    modalElement.removeEventListener('hidden.bs.modal', handlePCDetailsModalClose);
+    modalElement.addEventListener('hidden.bs.modal', handlePCDetailsModalClose);
+    
+    // Modal kapatıldığında header istatistiklerini güncelleme
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        console.log('📋 PC detay modal kapatıldı - header istatistikleri güncellenmeyecek');
+    });
 }
 
 // PC detaylarını yükle
@@ -447,7 +539,8 @@ function loadPCDetails(pcId, pcNumber) {
     `;
     
     // AJAX ile PC detaylarını getir
-    fetch('../controllers/AssignmentController.php', {
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/controllers/AssignmentController.php`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -573,16 +666,6 @@ function displayPCStudents(students) {
                                     </div>
                                 ` : ''}
                             </div>
-                            <div class="mt-auto">
-                                <div class="btn-group w-100" role="group">
-                                    <button class="btn btn-outline-warning btn-sm" onclick="transferStudent(${student.student_id}, ${student.assignment_id})" title="Taşı">
-                                        <i class="fas fa-exchange-alt me-1"></i>Taşı
-                                    </button>
-                                    <button class="btn btn-outline-danger btn-sm" onclick="removeStudentFromPC(${student.assignment_id})" title="Kaldır">
-                                        <i class="fas fa-times me-1"></i>Kaldır
-                                    </button>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -601,131 +684,44 @@ function refreshPCDetails() {
     }
 }
 
-// PC'den öğrenci kaldır
-function removeStudentFromPC(assignmentId) {
-    if (!confirm('Bu öğrenciyi PC\'den kaldırmak istediğinizden emin misiniz?')) {
-        return;
-    }
-    
-    console.log('📋 PC\'den öğrenci kaldırılıyor:', assignmentId);
-    
-    fetch('../controllers/AssignmentController.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `action=remove_student_from_pc&assignment_id=${assignmentId}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('📋 Kaldırma yanıtı:', data);
-        if (data.success) {
-            showToast('Öğrenci PC\'den kaldırıldı!', 'success');
-            
-            // PC detaylarını yenile
-            refreshPCDetails();
-            
-            // Ana sayfadaki PC kartlarını yenile
-            if (typeof loadPCCards === 'function') {
-                loadPCCards(window.currentLabId, window.currentLabName);
-            }
-        } else {
-            showToast('Kaldırma sırasında hata oluştu: ' + data.message, 'error');
+// PC detay modal kapatma işleyicisi
+function handlePCDetailsModalClose() {
+    try {
+        console.log('📋 PC detay modal kapatma işlemi başlatılıyor...');
+        
+        // Sadece PC ile ilgili değişkenleri temizle, laboratuvar bilgilerini koru
+        window.currentPCId = null;
+        window.currentPCNumber = null;
+        // window.currentLabId ve window.currentLabName korunuyor
+        
+        console.log('📋 PC detay modal kapatıldı, PC değişkenleri temizlendi - laboratuvar bilgileri korundu');
+        console.log('📋 Kalan laboratuvar bilgileri - LabId:', window.currentLabId, 'LabName:', window.currentLabName);
+        
+        // Hata kontrolü için 1 saniye bekle
+        setTimeout(() => {
+            console.log('📋 PC detay modal kapatma işlemi tamamlandı');
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ PC detay modal kapatma hatası:', error);
+        console.error('❌ Hata detayları:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+            currentPCId: window.currentPCId,
+            currentPCNumber: window.currentPCNumber,
+            currentLabId: window.currentLabId
+        });
+        
+        // Hata mesajını kullanıcıya göster
+        if (typeof showToast === 'function') {
+            showToast('PC detay modal kapatılırken hata oluştu: ' + error.message, 'error');
         }
-    })
-    .catch(error => {
-        console.error('❌ Kaldırma hatası:', error);
-        showToast('Kaldırma sırasında bir hata oluştu', 'error');
-    });
+    }
 }
 
-// Öğrenciyi başka PC'ye taşı
-function transferStudent(studentId, assignmentId) {
-    console.log('📋 Öğrenci taşınıyor:', studentId, assignmentId);
-    
-    // Mevcut PC bilgilerini al
-    const currentPCId = window.currentPCId;
-    const currentPCNumber = window.currentPCNumber;
-    const currentLabId = window.currentLabId;
-    
-    if (!currentPCId || !currentLabId) {
-        showToast('PC bilgileri bulunamadı!', 'error');
-        return;
-    }
-    
-    // Transfer modalını göster
-    showTransferModal(studentId, assignmentId, currentPCId, currentPCNumber, currentLabId);
-}
 
-// Transfer modalını göster
-function showTransferModal(studentId, assignmentId, currentPCId, currentPCNumber, currentLabId) {
-    // Modal HTML'ini oluştur
-    const modalHTML = `
-        <div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header bg-warning text-dark">
-                        <h5 class="modal-title" id="transferModalLabel">
-                            <i class="fas fa-exchange-alt me-2"></i>Öğrenci Taşı
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Mevcut PC:</strong> PC ${currentPCNumber} - Laboratuvar ${currentLabId}
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Hedef PC Seçin:</label>
-                            <div id="availablePCsList" class="row">
-                                <div class="col-12 text-center">
-                                    <i class="fas fa-spinner fa-spin me-2"></i>PC'ler yükleniyor...
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="alert alert-warning" id="transferWarning" style="display: none;">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <span id="transferWarningText"></span>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                        <button type="button" class="btn btn-warning" id="confirmTransfer" disabled>
-                            <i class="fas fa-exchange-alt me-2"></i>Taşı
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Modal'ı DOM'a ekle
-    const existingModal = document.getElementById('transferModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Modal'ı göster
-    const modal = new bootstrap.Modal(document.getElementById('transferModal'));
-    modal.show();
-    
-    // Mevcut PC'yi seçili olarak işaretle
-    window.transferData = {
-        studentId: studentId,
-        assignmentId: assignmentId,
-        currentPCId: currentPCId,
-        currentPCNumber: currentPCNumber,
-        currentLabId: currentLabId,
-        selectedPCId: null
-    };
-    
-    // Kullanılabilir PC'leri yükle
-    loadAvailablePCsForTransfer(currentLabId, currentPCId);
-}
+
 
 // Transfer için kullanılabilir PC'leri yükle
 function loadAvailablePCsForTransfer(labId, excludePCId) {
@@ -733,7 +729,8 @@ function loadAvailablePCsForTransfer(labId, excludePCId) {
     
     console.log('📋 Transfer için PCler yükleniyor - labId:', labId, 'excludePCId:', excludePCId);
     
-    fetch(`../controllers/AssignmentController.php?action=get_lab_pcs&computer_id=${labId}`)
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/controllers/AssignmentController.php?action=get_lab_pcs&computer_id=${labId}`)
     .then(response => response.json())
     .then(data => {
         console.log('📋 Transfer PC yanıtı:', data);
@@ -780,12 +777,13 @@ function displayAvailablePCsForTransfer(pcs, excludePCId) {
             return;
         }
         
-        const isOccupied = pc.student_count > 0;
+        // PC'nin dolu olup olmadığını kontrol et
+        const isOccupied = (pc.students && pc.students.length > 0) || (pc.student_count && pc.student_count > 0);
         const statusClass = isOccupied ? 'border-warning' : 'border-success';
         const statusText = isOccupied ? 'Dolu' : 'Boş';
         const statusIcon = isOccupied ? 'fas fa-user' : 'fas fa-user-plus';
         
-        console.log('📋 PC ekleniyor:', pc.pc_id, pc.pc_number, 'isOccupied:', isOccupied);
+        console.log('📋 PC ekleniyor:', pc.pc_id, pc.pc_number, 'isOccupied:', isOccupied, 'students:', pc.students, 'student_count:', pc.student_count);
         
         pcsHTML += `
             <div class="col-lg-2 col-md-3 col-sm-4 col-6 mb-3">
@@ -800,7 +798,7 @@ function displayAvailablePCsForTransfer(pcs, excludePCId) {
                             <span class="badge ${isOccupied ? 'bg-warning' : 'bg-success'}">${statusText}</span>
                         </div>
                         ${isOccupied ? `
-                            <small class="text-muted">${pc.student_count} öğrenci</small>
+                            <small class="text-muted">${pc.students ? pc.students.length : pc.student_count || 0} öğrenci</small>
                         ` : `
                             <small class="text-success">Müsait</small>
                         `}
@@ -867,7 +865,8 @@ function executeTransfer() {
     confirmBtn.disabled = true;
     confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Taşınıyor...';
     
-    fetch('../controllers/AssignmentController.php', {
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/controllers/AssignmentController.php`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -879,16 +878,31 @@ function executeTransfer() {
         if (data.success) {
             showToast('Öğrenci başarıyla taşındı!', 'success');
             
-            // Modal'ı kapat
-            const modal = bootstrap.Modal.getInstance(document.getElementById('transferModal'));
-            modal.hide();
+            // Transfer modal'ını kapat
+            const transferModal = bootstrap.Modal.getInstance(document.getElementById('transferModal'));
+            if (transferModal) {
+                transferModal.hide();
+            }
             
-            // PC detaylarını yenile
-            refreshPCDetails();
+            // PC detay modal'ını da kapat (eğer açıksa)
+            const pcDetailsModal = bootstrap.Modal.getInstance(document.getElementById('pcDetailsModal'));
+            if (pcDetailsModal) {
+                pcDetailsModal.hide();
+            }
             
-            // Ana sayfadaki PC kartlarını yenile
-            if (typeof loadPCCards === 'function') {
-                loadPCCards(window.currentLabId, window.currentLabName);
+            // Global PC değişkenlerini temizle
+            window.currentPCId = null;
+            window.currentPCNumber = null;
+            // window.currentLabId korunuyor
+            
+            // PC kartlarını yenile (laboratuvar seçimi korunur)
+            const labSelector = document.getElementById('labSelector');
+            if (labSelector && labSelector.value) {
+                const selectedLabId = labSelector.value;
+                const selectedLabText = labSelector.options[labSelector.selectedIndex].text;
+                if (typeof loadPCCards === 'function') {
+                    loadPCCards(selectedLabId, selectedLabText);
+                }
             }
         } else {
             showToast('Taşıma sırasında hata oluştu: ' + data.message, 'error');
@@ -1057,6 +1071,9 @@ function openAssignmentModal(pcId, pcNumber, selectedLabId = null, pcDisplayNumb
             console.error('❌ Lab name element bulunamadı!');
         }
         
+        // Filtreleme seçeneklerini yükle
+        loadModalFilterOptions();
+        
         // Öğrenci verilerini yükle
         console.log('📋 Öğrenci verileri yükleniyor - selectedLabId:', selectedLabId, 'pcId:', pcId);
         loadStudentCards(selectedLabId, pcId);
@@ -1066,7 +1083,7 @@ function openAssignmentModal(pcId, pcNumber, selectedLabId = null, pcDisplayNumb
 
 
 // Öğrenci listesini yükle
-function loadStudentCards(computerId, pcId) {
+function loadStudentCards(computerId, pcId, filters = {}) {
     const studentListContainer = document.getElementById('studentListContainer');
     const loadingIndicator = document.getElementById('studentLoadingIndicator');
     
@@ -1074,38 +1091,75 @@ function loadStudentCards(computerId, pcId) {
     loadingIndicator.style.display = 'block';
     studentListContainer.innerHTML = '';
     
+    // Filtreleme parametrelerini URL'ye ekle
+    let url = `${window.location.origin}/myopc/controllers/AssignmentController.php?action=get_students_for_assignment&computer_id=${computerId}&pc_id=${pcId}`;
+    
+    if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
+    if (filters.year) url += `&year=${encodeURIComponent(filters.year)}`;
+    if (filters.department) url += `&department=${encodeURIComponent(filters.department)}`;
+    
     // AJAX ile öğrenci verilerini getir
-    fetch(`../controllers/AssignmentController.php?action=get_students_for_assignment&computer_id=${computerId}&pc_id=${pcId}&max_students=4`)
-        .then(response => response.json())
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text().then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('JSON parse error:', e);
+                    console.error('Response text:', text);
+                    throw new Error('Sunucudan geçersiz yanıt alındı. Lütfen sayfayı yenileyin.');
+                }
+            });
+        })
         .then(data => {
             if (data.success) {
-                displaySimpleStudentList(data.students, data.maxStudentsPerCard || 4);
+                // Maksimum öğrenci sayısını güncelle
+                if (data.maxStudentsPerPC) {
+                    updateMaxStudentsDisplay(data.maxStudentsPerPC);
+                }
+                displaySimpleStudentList(data.students);
             } else {
                 showToast('Öğrenci verileri yüklenirken hata oluştu: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showToast('Öğrenci verileri yüklenirken bir hata oluştu', 'error');
+            showToast('Öğrenci verileri yüklenirken bir hata oluştu: ' + error.message, 'error');
         })
         .finally(() => {
             loadingIndicator.style.display = 'none';
         });
 }
 
+// Maksimum öğrenci sayısını güncelle
+function updateMaxStudentsDisplay(maxStudents) {
+    const warningMaxStudentsElement = document.getElementById('warningMaxStudents');
+    if (warningMaxStudentsElement) {
+        warningMaxStudentsElement.textContent = maxStudents;
+    }
+    
+    const maxStudentsCountElement = document.getElementById('maxStudentsCount');
+    if (maxStudentsCountElement) {
+        maxStudentsCountElement.textContent = maxStudents;
+    }
+    
+    console.log('📋 Maksimum öğrenci sayısı güncellendi:', maxStudents);
+}
+
 // Basit öğrenci listesi görüntüle
-function displaySimpleStudentList(students, maxStudentsPerCard = 4) {
+function displaySimpleStudentList(students) {
     const studentListContainer = document.getElementById('studentListContainer');
     
-    // Sadece atanmamış öğrencileri filtrele
-    const availableStudents = students.filter(student => !student.is_assigned);
+    // Sadece atanabilir öğrencileri filtrele (lab-specific filtering)
+    const availableStudents = students.filter(student => student.can_be_assigned);
     
     // Mevcut PC'deki öğrenci sayısını al
     const currentStudentCount = getCurrentPCStudentCount();
-    const remainingSlots = maxStudentsPerCard - currentStudentCount;
     
-    // Sınır uyarısını göster/gizle
-    updateStudentLimitWarning(currentStudentCount, maxStudentsPerCard, remainingSlots);
+    // Sınır uyarısı kaldırıldı - çoklu atama destekli
     
     if (availableStudents.length === 0) {
         studentListContainer.innerHTML = `
@@ -1118,17 +1172,7 @@ function displaySimpleStudentList(students, maxStudentsPerCard = 4) {
         return;
     }
     
-    // Eğer PC dolu ise uyarı göster
-    if (remainingSlots <= 0) {
-        studentListContainer.innerHTML = `
-            <div class="text-center py-4">
-                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                <h6 class="text-warning">PC Dolu!</h6>
-                <p class="text-muted">Bu PC'ye maksimum ${maxStudentsPerCard} öğrenci atanabilir. Önce mevcut öğrencilerden birini kaldırın.</p>
-            </div>
-        `;
-        return;
-    }
+    // PC dolu kontrolü kaldırıldı - çoklu atama destekli
     
     let listHTML = `
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1142,8 +1186,8 @@ function displaySimpleStudentList(students, maxStudentsPerCard = 4) {
         <div class="row">
     `;
     
-    // Kalan slot sayısına göre öğrenci sayısını sınırla
-    const limitedStudents = availableStudents.slice(0, remainingSlots);
+    // Tüm öğrencileri göster (sınır kaldırıldı)
+    const limitedStudents = availableStudents;
     
     limitedStudents.forEach(student => {
         listHTML += `
@@ -1154,7 +1198,7 @@ function displaySimpleStudentList(students, maxStudentsPerCard = 4) {
                                type="checkbox" 
                                value="${student.student_id}"
                                id="student_${student.student_id}"
-                               onchange="checkStudentLimit(${maxStudentsPerCard})">
+                               onchange="updateSelectedCount()">
                         <label class="form-check-label w-100" for="student_${student.student_id}">
                             <div class="student-info-simple">
                                 <div class="student-name-simple">${student.full_name}</div>
@@ -1173,17 +1217,7 @@ function displaySimpleStudentList(students, maxStudentsPerCard = 4) {
         `;
     });
     
-    // Eğer daha fazla öğrenci varsa uyarı göster
-    if (availableStudents.length > remainingSlots) {
-        listHTML += `
-            <div class="col-12">
-                <div class="alert alert-info text-center">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Sadece ${remainingSlots} öğrenci daha atanabilir. ${availableStudents.length - remainingSlots} öğrenci gösterilmiyor.
-                </div>
-            </div>
-        `;
-    }
+    // Uyarı mesajı kaldırıldı - tüm öğrenciler gösteriliyor
     
     listHTML += '</div>';
     studentListContainer.innerHTML = listHTML;
@@ -1195,23 +1229,11 @@ function displaySimpleStudentList(students, maxStudentsPerCard = 4) {
 // Tüm öğrencileri seç
 function selectAllStudents() {
     const checkboxes = document.querySelectorAll('.student-checkbox');
-    const currentStudentCount = getCurrentPCStudentCount();
-    const maxStudentsPerCard = 4; // Varsayılan sınır
-    const remainingSlots = maxStudentsPerCard - currentStudentCount;
     
-    let selectedCount = 0;
+    // Tüm öğrencileri seç (sınır kaldırıldı)
     checkboxes.forEach(checkbox => {
-        if (selectedCount < remainingSlots) {
-            checkbox.checked = true;
-            selectedCount++;
-        } else {
-            checkbox.checked = false;
-        }
+        checkbox.checked = true;
     });
-    
-    if (checkboxes.length > remainingSlots) {
-        showToast(`Sadece ${remainingSlots} öğrenci daha seçilebilir. ${checkboxes.length - remainingSlots} öğrenci seçilemedi.`, 'warning', 'Sınır Uyarısı');
-    }
     
     updateSelectedCount();
 }
@@ -1276,25 +1298,7 @@ function updateStudentLimitWarning(currentCount, maxCount, remainingSlots) {
     }
 }
 
-// Öğrenci seçimi sırasında sınır kontrolü
-function checkStudentLimit(maxStudentsPerCard) {
-    const currentStudentCount = getCurrentPCStudentCount();
-    const selectedCount = document.querySelectorAll('.student-checkbox:checked').length;
-    const totalSelected = currentStudentCount + selectedCount;
-    
-    if (totalSelected > maxStudentsPerCard) {
-        // Sınır aşıldı, son seçimi geri al
-        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
-        const lastChecked = checkboxes[checkboxes.length - 1];
-        if (lastChecked) {
-            lastChecked.checked = false;
-        }
-        
-        showToast(`Maksimum ${maxStudentsPerCard} öğrenci atanabilir! Şu anda ${currentStudentCount} öğrenci atanmış durumda.`, 'warning', 'Sınır Aşıldı');
-    }
-    
-    updateSelectedCount();
-}
+// Sınır kontrolü kaldırıldı - çoklu atama destekli
 
 
 // Atama işlemini gerçekleştir
@@ -1303,8 +1307,18 @@ function performAssignment() {
     
     const selectedCheckboxes = document.querySelectorAll('.student-checkbox:checked');
     const selectedStudentIds = Array.from(selectedCheckboxes).map(checkbox => checkbox.value);
-    const pcId = document.getElementById('selectedPCId').value;
-    const computerId = document.getElementById('selectedComputerId').value;
+    
+    const pcIdElement = document.getElementById('selectedPCId');
+    const computerIdElement = document.getElementById('selectedComputerId');
+    
+    if (!pcIdElement || !computerIdElement) {
+        console.error('❌ Gerekli form elementleri bulunamadı!');
+        showToast('Form hatası: Gerekli alanlar bulunamadı!', 'error');
+        return;
+    }
+    
+    const pcId = pcIdElement.value;
+    const computerId = computerIdElement.value;
     
     console.log('📋 Seçili öğrenci sayısı:', selectedStudentIds.length);
     console.log('📋 Seçili öğrenci ID\'leri:', selectedStudentIds);
@@ -1317,14 +1331,7 @@ function performAssignment() {
     }
     
     // Öğrenci sınırı kontrolü
-    const currentStudentCount = getCurrentPCStudentCount();
-    const totalAfterAssignment = currentStudentCount + selectedStudentIds.length;
-    const maxStudentsPerCard = 4; // Varsayılan sınır
-    
-    if (totalAfterAssignment > maxStudentsPerCard) {
-        showToast(`Maksimum ${maxStudentsPerCard} öğrenci atanabilir! Şu anda ${currentStudentCount} öğrenci atanmış durumda. ${selectedStudentIds.length} öğrenci daha ekleyemezsiniz.`, 'error', 'Sınır Aşıldı');
-        return;
-    }
+    // Sınır kontrolü kaldırıldı - çoklu atama destekli
     
     // Loading durumu
     const assignBtn = document.getElementById('confirmAssignment');
@@ -1357,7 +1364,8 @@ function performAssignment() {
     console.log('📋 Request Body:', requestBody);
     
     // AJAX ile atama yap
-    fetch('../controllers/AssignmentController.php?action=bulk_assign', {
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/controllers/AssignmentController.php?action=bulk_assign`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -1373,15 +1381,84 @@ function performAssignment() {
         console.log('📋 Response Data:', data);
         if (data.success) {
             console.log('✅ Atama başarılı!');
-            showToast(`${selectedStudentIds.length} öğrenci başarıyla atandı!`, 'success', 'Atama Başarılı');
             
-            // Modal'ı kapat
-            bootstrap.Modal.getInstance(document.getElementById('assignmentModal')).hide();
+            // Seçilen öğrencilerin bilgilerini al
+            const selectedStudents = [];
+            selectedStudentIds.forEach(studentId => {
+                const checkbox = document.querySelector(`input[value="${studentId}"]`);
+                if (checkbox) {
+                    const label = checkbox.closest('label');
+                    const nameElement = label.querySelector('.student-name-simple');
+                    const detailsElement = label.querySelector('.student-details-simple');
+                    
+                    if (nameElement && detailsElement) {
+                        const studentInfo = {
+                            full_name: nameElement.textContent.trim(),
+                            sdt_nmbr: '',
+                            academic_year: '',
+                            department: '',
+                            class_level: ''
+                        };
+                        
+                        // Detayları parse et
+                        const detailItems = detailsElement.querySelectorAll('small');
+                        detailItems.forEach(item => {
+                            const text = item.textContent.trim();
+                            if (text.includes('fas fa-id-card')) {
+                                studentInfo.sdt_nmbr = text.replace(/.*fas fa-id-card.*?(\d+).*/, '$1');
+                            } else if (text.includes('fas fa-calendar')) {
+                                studentInfo.academic_year = text.replace(/.*fas fa-calendar.*?(\d{4}).*/, '$1');
+                            } else if (text.includes('fas fa-building')) {
+                                studentInfo.department = text.replace(/.*fas fa-building.*?([^|]+).*/, '$1').trim();
+                            } else if (text.includes('fas fa-graduation-cap')) {
+                                studentInfo.class_level = text.replace(/.*fas fa-graduation-cap.*?([^|]+).*/, '$1').trim();
+                            }
+                        });
+                        
+                        selectedStudents.push(studentInfo);
+                    }
+                }
+            });
             
-            // PC kartlarını yenile
-            const selectedLabText = labSelector.options[labSelector.selectedIndex].text;
-            console.log('🔄 PC kartları yenileniyor - Lab ID:', computerId, 'Lab Name:', selectedLabText);
-            loadPCCards(computerId, selectedLabText);
+            // Başarı mesajını göster
+            const message = selectedStudentIds.length === 1 
+                ? 'Öğrenci başarıyla atandı!' 
+                : `${selectedStudentIds.length} öğrenci başarıyla atandı!`;
+            
+            // İlk öğrencinin bilgilerini göster
+            if (selectedStudents.length > 0) {
+                const firstStudent = selectedStudents[0];
+                showToast(message, 'success', 'Atama Başarılı', firstStudent);
+            } else {
+                showToast(message, 'success', 'Atama Başarılı');
+            }
+            
+            // Atama modal'ını kapat
+            const assignmentModal = bootstrap.Modal.getInstance(document.getElementById('assignmentModal'));
+            if (assignmentModal) {
+                assignmentModal.hide();
+            }
+            
+            // PC detay modal'ını da kapat (eğer açıksa)
+            const pcDetailsModal = bootstrap.Modal.getInstance(document.getElementById('pcDetailsModal'));
+            if (pcDetailsModal) {
+                pcDetailsModal.hide();
+            }
+            
+            // Global PC değişkenlerini temizle
+            window.currentPCId = null;
+            window.currentPCNumber = null;
+            // window.currentLabId korunuyor
+            
+            // PC kartlarını yenile (laboratuvar seçimi korunur)
+            const labSelector = document.getElementById('labSelector');
+            if (labSelector && labSelector.value) {
+                const selectedLabId = labSelector.value;
+                const selectedLabText = labSelector.options[labSelector.selectedIndex].text;
+                if (typeof loadPCCards === 'function') {
+                    loadPCCards(selectedLabId, selectedLabText);
+                }
+            }
         } else {
             console.error('❌ Atama başarısız:', data.message);
             showToast(data.message || 'Bilinmeyen hata oluştu!', 'error', 'Atama Hatası');
@@ -1398,10 +1475,19 @@ function performAssignment() {
     });
 }
 
+
 // PC sayısı düzenleme modal'ını aç
 function openEditPCCountModal(labId, labName, currentCount) {
-    document.getElementById('currentLabName').textContent = labName;
-    document.getElementById('newPCCount').value = currentCount;
+    const currentLabNameElement = document.getElementById('currentLabName');
+    const newPCCountElement = document.getElementById('newPCCount');
+    
+    if (currentLabNameElement) {
+        currentLabNameElement.textContent = labName;
+    }
+    
+    if (newPCCountElement) {
+        newPCCountElement.value = currentCount;
+    }
     
     // Uyarı kutusunu temizle ve gizle
     const warningDiv = document.getElementById('pcCountWarning');
@@ -1420,19 +1506,28 @@ function openEditPCCountModal(labId, labName, currentCount) {
 
 // Laboratuvar için maksimum öğrenci sayısını yükle
 function loadMaxStudentsPerPC(labId) {
-    fetch(`../controllers/AssignmentController.php?action=get_lab_max_students&computer_id=${labId}`)
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/controllers/AssignmentController.php?action=get_lab_max_students&computer_id=${labId}`)
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                document.getElementById('maxStudentsPerPC').value = data.maxStudentsPerPC || 4;
+            const maxStudentsElement = document.getElementById('maxStudentsPerPC');
+            if (maxStudentsElement) {
+                if (data.success) {
+                    maxStudentsElement.value = data.maxStudentsPerPC || 4;
+                } else {
+                    console.warn('Maksimum öğrenci sayısı yüklenemedi:', data.message);
+                    maxStudentsElement.value = 4; // Varsayılan değer
+                }
             } else {
-                console.warn('Maksimum öğrenci sayısı yüklenemedi:', data.message);
-                document.getElementById('maxStudentsPerPC').value = 4; // Varsayılan değer
+                console.warn('maxStudentsPerPC elementi bulunamadı');
             }
         })
         .catch(error => {
             console.error('Maksimum öğrenci sayısı yükleme hatası:', error);
-            document.getElementById('maxStudentsPerPC').value = 4; // Varsayılan değer
+            const maxStudentsElement = document.getElementById('maxStudentsPerPC');
+            if (maxStudentsElement) {
+                maxStudentsElement.value = 4; // Varsayılan değer
+            }
         });
 }
 
@@ -1457,26 +1552,43 @@ function openEditMaxStudentsModal(labId, labName) {
 
 // Modal için maksimum öğrenci sayısını yükle
 function loadMaxStudentsForModal(labId) {
-    fetch(`../controllers/AssignmentController.php?action=get_lab_max_students&computer_id=${labId}`)
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/controllers/AssignmentController.php?action=get_lab_max_students&computer_id=${labId}`)
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                document.getElementById('newMaxStudentsPerPC').value = data.maxStudentsPerPC || 4;
+            const newMaxStudentsElement = document.getElementById('newMaxStudentsPerPC');
+            if (newMaxStudentsElement) {
+                if (data.success) {
+                    newMaxStudentsElement.value = data.maxStudentsPerPC || 4;
+                } else {
+                    console.warn('Maksimum öğrenci sayısı yüklenemedi:', data.message);
+                    newMaxStudentsElement.value = 4; // Varsayılan değer
+                }
             } else {
-                console.warn('Maksimum öğrenci sayısı yüklenemedi:', data.message);
-                document.getElementById('newMaxStudentsPerPC').value = 4; // Varsayılan değer
+                console.warn('newMaxStudentsPerPC elementi bulunamadı');
             }
         })
         .catch(error => {
             console.error('Maksimum öğrenci sayısı yükleme hatası:', error);
-            document.getElementById('newMaxStudentsPerPC').value = 4; // Varsayılan değer
+            const newMaxStudentsElement = document.getElementById('newMaxStudentsPerPC');
+            if (newMaxStudentsElement) {
+                newMaxStudentsElement.value = 4; // Varsayılan değer
+            }
         });
 }
 
 // PC sayısı kaydetme
 document.getElementById('savePCCount').addEventListener('click', function() {
     const selectedLabId = labSelector.value;
-    const newPCCount = document.getElementById('newPCCount').value;
+    const newPCCountElement = document.getElementById('newPCCount');
+    
+    if (!newPCCountElement) {
+        console.error('❌ newPCCount elementi bulunamadı!');
+        showToast('Form hatası: PC sayısı alanı bulunamadı!', 'error');
+        return;
+    }
+    
+    const newPCCount = newPCCountElement.value;
     const selectedOption = labSelector.options[labSelector.selectedIndex];
     const currentPCCount = selectedOption.getAttribute('data-pc-count');
     
@@ -1497,7 +1609,8 @@ document.getElementById('savePCCount').addEventListener('click', function() {
     saveBtn.disabled = true;
     
     // AJAX ile PC sayısını güncelle
-    fetch('../controllers/AssignmentController.php', {
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/controllers/AssignmentController.php`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -1559,14 +1672,30 @@ document.getElementById('savePCCount').addEventListener('click', function() {
 
 // Modal kapandığında warning'i temizle
 document.getElementById('editPCCountModal').addEventListener('hidden.bs.modal', function() {
-    document.getElementById('pcCountWarning').style.display = 'none';
-    document.getElementById('newPCCount').value = '';
+    const warningDiv = document.getElementById('pcCountWarning');
+    const newPCCountElement = document.getElementById('newPCCount');
+    
+    if (warningDiv) {
+        warningDiv.style.display = 'none';
+    }
+    
+    if (newPCCountElement) {
+        newPCCountElement.value = '';
+    }
 });
 
 // Maksimum öğrenci sayısı kaydetme
 document.getElementById('saveMaxStudents').addEventListener('click', function() {
     const selectedLabId = labSelector.value;
-    const newMaxStudents = document.getElementById('newMaxStudentsPerPC').value;
+    const newMaxStudentsElement = document.getElementById('newMaxStudentsPerPC');
+    
+    if (!newMaxStudentsElement) {
+        console.error('❌ newMaxStudentsPerPC elementi bulunamadı!');
+        showToast('Form hatası: Maksimum öğrenci sayısı alanı bulunamadı!', 'error');
+        return;
+    }
+    
+    const newMaxStudents = newMaxStudentsElement.value;
     
     if (!newMaxStudents || newMaxStudents < 1 || newMaxStudents > 20) {
         showToast('Lütfen 1-20 arasında geçerli bir maksimum öğrenci sayısı girin!', 'error');
@@ -1580,7 +1709,8 @@ document.getElementById('saveMaxStudents').addEventListener('click', function() 
     saveBtn.disabled = true;
     
     // AJAX ile maksimum öğrenci sayısını güncelle
-    fetch('../controllers/AssignmentController.php', {
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/controllers/AssignmentController.php`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -1637,8 +1767,16 @@ document.getElementById('saveMaxStudents').addEventListener('click', function() 
 
 // Maksimum öğrenci sayısı modal kapandığında warning'i temizle
 document.getElementById('editMaxStudentsModal').addEventListener('hidden.bs.modal', function() {
-    document.getElementById('maxStudentsWarning').style.display = 'none';
-    document.getElementById('newMaxStudentsPerPC').value = '';
+    const warningDiv = document.getElementById('maxStudentsWarning');
+    const newMaxStudentsElement = document.getElementById('newMaxStudentsPerPC');
+    
+    if (warningDiv) {
+        warningDiv.style.display = 'none';
+    }
+    
+    if (newMaxStudentsElement) {
+        newMaxStudentsElement.value = '';
+    }
 });
 
 // Atama modal'ı için event listener'lar
@@ -1696,7 +1834,8 @@ document.getElementById('excelImportForm').addEventListener('submit', function(e
     formData.append('excel_file', file);
     
     // AJAX ile dosyayı gönder
-    fetch('../excel-to-mysql/import.php', {
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/excel-to-mysql/import.php`, {
         method: 'POST',
         body: formData
     })
@@ -1897,10 +2036,23 @@ function showImportResults(data) {
     resultDiv.innerHTML = resultHTML;
     showToast(`${data.imported_count} öğrenci başarıyla eklendi!`, 'success');
     
-    // 3 saniye sonra sayfayı yenile (istatistikleri güncellemek için)
-    setTimeout(() => {
-        location.reload();
-    }, 3000);
+    // Sadece öğrenci eklendiyse lab'ı güncelle
+    if (data.imported_count > 0) {
+        // PC kartlarını yenile (laboratuvar seçimi korunur)
+        const labSelector = document.getElementById('labSelector');
+        if (labSelector && labSelector.value) {
+            const selectedLabId = labSelector.value;
+            const selectedLabText = labSelector.options[labSelector.selectedIndex].text;
+            if (typeof loadPCCards === 'function') {
+                loadPCCards(selectedLabId, selectedLabText);
+            }
+        }
+        
+        // Header istatistiklerini güncelle
+        if (typeof updateHeaderStats === 'function') {
+            updateHeaderStats();
+        }
+    }
 }
 
 // Import'u onayla
@@ -1922,7 +2074,8 @@ function confirmImport(tempFile, importValidOnly) {
     formData.append('import_valid_only', importValidOnly ? 'true' : 'false');
     
     // AJAX ile onaylanmış import'u gönder
-    fetch('../excel-to-mysql/import.php', {
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/excel-to-mysql/import.php`, {
         method: 'POST',
         body: formData
     })
@@ -1976,7 +2129,8 @@ function cancelImport(tempFile) {
     formData.append('cancel_import', 'true');
     formData.append('temp_file', tempFile);
     
-    fetch('../excel-to-mysql/import.php', {
+    const baseUrl = window.location.origin + '/myopc';
+    fetch(`${baseUrl}/excel-to-mysql/import.php`, {
         method: 'POST',
         body: formData
     });
@@ -1991,51 +2145,251 @@ function cancelImport(tempFile) {
 
 // Header istatistiklerini güncelle
 function updateHeaderStats() {
-    console.log('📊 Header istatistikleri güncelleniyor...');
-    
-    fetch('../controllers/StatsController.php', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Öğrenci sayısını güncelle
-            const studentStat = document.querySelector('.header-stat-item:nth-child(1) .stat-number');
-            if (studentStat) {
-                studentStat.textContent = data.stats.student_count;
+    try {
+        console.log('📊 Header istatistikleri güncelleniyor...');
+        console.log('📊 Mevcut URL:', window.location.origin);
+        console.log('📊 Mevcut sayfa:', window.location.pathname);
+        
+        const baseUrl = window.location.origin + '/myopc';
+        console.log('📊 StatsController URL:', `${baseUrl}/controllers/StatsController.php`);
+        
+        fetch(`${baseUrl}/controllers/StatsController.php`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
             }
-            
-            // Laboratuvar sayısını güncelle
-            const labStat = document.querySelector('.header-stat-item:nth-child(2) .stat-number');
-            if (labStat) {
-                labStat.textContent = data.stats.lab_count;
+        })
+        .then(response => {
+            console.log('📊 StatsController yanıtı:', response.status, response.statusText);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
             }
-            
-            // Atama sayısını güncelle
-            const assignmentStat = document.querySelector('.header-stat-item:nth-child(3) .stat-number');
-            if (assignmentStat) {
-                assignmentStat.textContent = data.stats.assignment_count;
+            return response.json();
+        })
+        .then(data => {
+            console.log('📊 StatsController verisi:', data);
+            if (data.success) {
+                // Öğrenci sayısını güncelle
+                const studentStat = document.querySelector('.header-stat-item:nth-child(1) .stat-number');
+                console.log('📊 Öğrenci stat elementi:', studentStat);
+                if (studentStat) {
+                    studentStat.textContent = data.stats.student_count;
+                    console.log('📊 Öğrenci sayısı güncellendi:', data.stats.student_count);
+                }
+                
+                // Laboratuvar sayısını güncelle
+                const labStat = document.querySelector('.header-stat-item:nth-child(2) .stat-number');
+                console.log('📊 Lab stat elementi:', labStat);
+                if (labStat) {
+                    labStat.textContent = data.stats.lab_count;
+                    console.log('📊 Lab sayısı güncellendi:', data.stats.lab_count);
+                }
+                
+                // Atama sayısını güncelle
+                const assignmentStat = document.querySelector('.header-stat-item:nth-child(3) .stat-number');
+                console.log('📊 Atama stat elementi:', assignmentStat);
+                if (assignmentStat) {
+                    assignmentStat.textContent = data.stats.assignment_count;
+                    console.log('📊 Atama sayısı güncellendi:', data.stats.assignment_count);
+                }
+                
+                console.log('✅ Header istatistikleri başarıyla güncellendi:', data.stats);
+            } else {
+                console.error('❌ Header istatistik güncelleme hatası:', data.message);
+                console.error('❌ Hata detayları:', data);
             }
-            
-            console.log('✅ Header istatistikleri başarıyla güncellendi:', data.stats);
-        } else {
-            console.error('❌ Header istatistik güncelleme hatası:', data.message);
-        }
-    })
-    .catch(error => {
-        console.error('❌ Header istatistik güncelleme hatası:', error);
-    });
+        })
+        .catch(error => {
+            console.error('❌ Header istatistik güncelleme hatası:', error);
+            console.error('❌ Hata detayları:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+                url: `${baseUrl}/controllers/StatsController.php`
+            });
+        });
+    } catch (error) {
+        console.error('❌ updateHeaderStats fonksiyon hatası:', error);
+        console.error('❌ Hata detayları:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        });
+    }
 }
 
 
+// Global hata yakalayıcı
+window.addEventListener('error', function(event) {
+    console.error('❌ Global JavaScript hatası:', {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        error: event.error,
+        stack: event.error ? event.error.stack : 'Stack trace yok'
+    });
+    
+    // Hata mesajını kullanıcıya göster
+    if (typeof showToast === 'function') {
+        showToast('JavaScript hatası: ' + event.message, 'error');
+    }
+});
+
+// Promise rejection hata yakalayıcı
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('❌ Promise rejection hatası:', {
+        reason: event.reason,
+        promise: event.promise
+    });
+    
+    // Hata mesajını kullanıcıya göster
+    if (typeof showToast === 'function') {
+        showToast('Promise hatası: ' + (event.reason ? event.reason.message || event.reason : 'Bilinmeyen hata'), 'error');
+    }
+});
+
+// Modal filtreleme seçeneklerini yükle
+function loadModalFilterOptions() {
+    // Yılları yükle
+    fetch('../api/students.php?action=get_years')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const yearSelect = document.getElementById('modalYearFilter');
+                yearSelect.innerHTML = '<option value="">Tüm Yıllar</option>';
+                data.years.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year.year;
+                    option.textContent = year.year;
+                    yearSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Yıl verileri yüklenemedi:', error));
+    
+    // Bölümleri yükle
+    fetch('../api/students.php?action=get_departments')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const departmentSelect = document.getElementById('modalDepartmentFilter');
+                departmentSelect.innerHTML = '<option value="">Tüm Bölümler</option>';
+                data.departments.forEach(dept => {
+                    const option = document.createElement('option');
+                    option.value = dept.department;
+                    option.textContent = dept.department;
+                    departmentSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Bölüm verileri yüklenemedi:', error));
+}
+
+// Modal filtreleme uygula
+function applyModalFilters() {
+    const searchElement = document.getElementById('modalSearchInput');
+    const yearElement = document.getElementById('modalYearFilter');
+    const departmentElement = document.getElementById('modalDepartmentFilter');
+    
+    if (!searchElement || !yearElement || !departmentElement) {
+        console.error('❌ Modal filtre elementleri bulunamadı!');
+        return;
+    }
+    
+    const search = searchElement.value;
+    const year = yearElement.value;
+    const department = departmentElement.value;
+    
+    // Mevcut PC ve lab bilgilerini al
+    const pcIdElement = document.getElementById('selectedPCId');
+    const computerIdElement = document.getElementById('selectedComputerId');
+    
+    if (!pcIdElement || !computerIdElement) {
+        console.error('❌ PC ID veya Computer ID elementleri bulunamadı!');
+        return;
+    }
+    
+    const pcId = pcIdElement.value;
+    const computerId = computerIdElement.value;
+    
+    // Öğrenci listesini filtrele
+    loadStudentCards(computerId, pcId, { search, year, department });
+}
+
 // Sayfa yüklendiğinde istatistikleri güncelle
 document.addEventListener('DOMContentLoaded', function() {
-    // Header istatistiklerini başlangıçta güncelle
-    updateHeaderStats();
+    console.log('📋 DOM yüklendi, başlangıç işlemleri başlatılıyor...');
     
-    // Her 30 saniyede bir header istatistikleri güncelle
-    setInterval(updateHeaderStats, 30000);
+    try {
+        // Header istatistiklerini başlangıçta güncelle
+        updateHeaderStats();
+        
+        // Her 30 saniyede bir header istatistikleri güncelle
+        setInterval(updateHeaderStats, 30000);
+        
+        console.log('✅ Başlangıç işlemleri tamamlandı');
+    } catch (error) {
+        console.error('❌ Başlangıç işlemleri hatası:', error);
+    }
 });
+
+// YENİ TOAST SİSTEMİ TEST FONKSİYONLARI
+function testStudentToast() {
+    const testStudentData = {
+        full_name: 'Zeynep Yıldız',
+        sdt_nmbr: '20240006',
+        academic_year: 2024,
+        department: 'Bilgisayar Programcılığı',
+        class_level: '1. Sınıf'
+    };
+    
+    showToast('Öğrenci başarıyla atandı!', 'success', 'Atama Başarılı', testStudentData);
+}
+
+function testSimpleToast() {
+    showToast('Bu basit bir test mesajıdır', 'info', 'Test Mesajı');
+}
+
+function testIncompleteStudentToast() {
+    const incompleteStudentData = {
+        full_name: 'Mehmet Kaya',
+        sdt_nmbr: '20240007'
+        // department ve class_level eksik
+    };
+    
+    showToast('Eksik bilgili öğrenci testi', 'warning', 'Eksik Bilgi', incompleteStudentData);
+}
+
+function testErrorToast() {
+    showToast('Bu bir hata mesajıdır', 'error', 'Hata');
+}
+
+function testWarningToast() {
+    showToast('Bu bir uyarı mesajıdır', 'warning', 'Uyarı');
+}
+
+// Debug için basit test
+function testDebugToast() {
+    console.log('Debug test başlatılıyor...');
+    const debugData = {
+        full_name: 'Test Öğrenci',
+        sdt_nmbr: '123456',
+        academic_year: 2024,
+        department: 'Test Bölümü',
+        class_level: 'Test Sınıfı'
+    };
+    showToast('Debug test mesajı', 'info', 'Debug', debugData);
+}
+
+// Basit test - sadece bölüm ve yıl
+function testSimpleStudent() {
+    const simpleData = {
+        full_name: 'Ahmet Yılmaz',
+        sdt_nmbr: '20240001',
+        academic_year: 2024,
+        department: 'Bilgisayar Programcılığı',
+        class_level: '1. Sınıf'
+    };
+    showToast('Basit öğrenci testi', 'success', 'Test', simpleData);
+}
