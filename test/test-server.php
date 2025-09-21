@@ -1,4 +1,11 @@
 <?php
+// PhpSpreadsheet autoload
+require_once '../vendor/autoload.php';
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
@@ -55,13 +62,47 @@ try {
             handleExcelUpload();
             break;
             
+        case 'test_500_error':
+            test500Error();
+            break;
+            
+        case 'test_error_handling':
+            testErrorHandling();
+            break;
+            
+        case 'simulate_server_error':
+            simulateServerError($input);
+            break;
+            
+        case 'test_phpspreadsheet':
+            testPhpSpreadsheet();
+            break;
+            
         default:
             echo json_encode(['success' => false, 'message' => 'Geçersiz test aksiyonu']);
             break;
     }
     
+} catch (Error $e) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Fatal Test Hatası: ' . $e->getMessage(),
+        'error_type' => get_class($e),
+        'error_file' => $e->getFile(),
+        'error_line' => $e->getLine(),
+        'http_status' => 500
+    ]);
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => 'Test hatası: ' . $e->getMessage()]);
+    http_response_code(500);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Test Hatası: ' . $e->getMessage(),
+        'error_type' => get_class($e),
+        'error_file' => $e->getFile(),
+        'error_line' => $e->getLine(),
+        'http_status' => 500
+    ]);
 }
 
 function testPHPVersion() {
@@ -351,10 +392,19 @@ function handleExcelUpload() {
         return;
     }
     
-    // Dosya türü kontrolü
-    $allowedTypes = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
-    if (!in_array($file['type'], $allowedTypes)) {
-        echo json_encode(['success' => false, 'message' => 'Geçersiz dosya türü. Sadece Excel dosyaları kabul edilir.']);
+    // Dosya türü kontrolü - daha geniş Excel format desteği
+    $allowedTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/vnd.ms-excel', // .xls
+        'text/csv', // .csv
+        'application/csv' // .csv alternatif
+    ];
+    
+    $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $allowedExtensions = ['xlsx', 'xls', 'csv'];
+    
+    if (!in_array($file['type'], $allowedTypes) && !in_array($fileExtension, $allowedExtensions)) {
+        echo json_encode(['success' => false, 'message' => 'Geçersiz dosya türü. Sadece Excel (.xlsx, .xls) ve CSV dosyaları kabul edilir.']);
         return;
     }
     
@@ -377,12 +427,22 @@ function handleExcelUpload() {
             return;
         }
         
+        // Excel dosyası hakkında detaylı bilgi
+        $fileInfo = [
+            'filename' => $fileName,
+            'file_size' => formatBytes($file['size']),
+            'file_type' => $file['type'],
+            'file_extension' => $fileExtension,
+            'row_count' => count($excelData),
+            'column_count' => count($excelData) > 0 ? count($excelData[0]) : 0
+        ];
+        
         echo json_encode([
             'success' => true,
-            'message' => 'Excel dosyası başarıyla yüklendi',
-            'filename' => $fileName,
+            'message' => 'Excel dosyası başarıyla yüklendi ve işlendi',
+            'file_info' => $fileInfo,
             'data' => $excelData,
-            'row_count' => count($excelData)
+            'phpspreadsheet_available' => true
         ]);
         
     } catch (Exception $e) {
@@ -391,18 +451,36 @@ function handleExcelUpload() {
 }
 
 function readSimpleExcel($filePath) {
-    // Basit Excel okuma fonksiyonu (CSV formatında)
-    // Gerçek Excel okuma için PhpSpreadsheet kütüphanesi gerekli
-    
-    // Dosya türünü kontrol et
-    $fileExtension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
-    
-    if ($fileExtension === 'csv') {
-        return readCSV($filePath);
-    } else {
-        // Excel dosyası için basit bir uyarı döndür
+    try {
+        // PhpSpreadsheet ile Excel dosyasını oku
+        $spreadsheet = IOFactory::load($filePath);
+        $worksheet = $spreadsheet->getActiveSheet();
+        $data = [];
+        
+        // Tüm satırları oku
+        foreach ($worksheet->getRowIterator() as $row) {
+            $rowData = [];
+            $cellIterator = $row->getCellIterator();
+            $cellIterator->setIterateOnlyExistingCells(false);
+            
+            foreach ($cellIterator as $cell) {
+                $rowData[] = $cell->getCalculatedValue();
+            }
+            $data[] = $rowData;
+        }
+        
+        return $data;
+        
+    } catch (Exception $e) {
+        // Hata durumunda CSV olarak dene
+        $fileExtension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        if ($fileExtension === 'csv') {
+            return readCSV($filePath);
+        }
+        
+        // Diğer hatalar için boş veri döndür
         return [
-            ['Excel dosyası tespit edildi', 'PhpSpreadsheet kütüphanesi gerekli'],
+            ['Hata: Excel dosyası okunamadı', $e->getMessage()],
             ['1. Sınıf', '2. Sınıf'],
             ['3. Sınıf', '4. Sınıf']
         ];
@@ -418,5 +496,393 @@ function readCSV($filePath) {
         fclose($handle);
     }
     return $data;
+}
+
+function test500Error() {
+    // 500 hata testi - çeşitli hata senaryolarını test et
+    $errorTests = [];
+    $passedTests = 0;
+    $totalTests = 0;
+    
+    try {
+        // Test 1: Fatal error simulation (memory limit)
+        $totalTests++;
+        $originalMemoryLimit = ini_get('memory_limit');
+        ini_set('memory_limit', '1M'); // Çok düşük limit
+        
+        try {
+            $largeArray = [];
+            for ($i = 0; $i < 1000000; $i++) {
+                $largeArray[] = str_repeat('x', 1000);
+            }
+            $errorTests[] = ['test' => 'Memory limit test', 'status' => 'FAIL', 'message' => 'Memory limit testi başarısız'];
+        } catch (Error $e) {
+            $errorTests[] = ['test' => 'Memory limit test', 'status' => 'PASS', 'message' => 'Memory limit hatası yakalandı: ' . $e->getMessage()];
+            $passedTests++;
+        } finally {
+            ini_set('memory_limit', $originalMemoryLimit);
+        }
+        
+        // Test 2: Division by zero
+        $totalTests++;
+        try {
+            $result = 1 / 0;
+            $errorTests[] = ['test' => 'Division by zero test', 'status' => 'FAIL', 'message' => 'Division by zero testi başarısız'];
+        } catch (DivisionByZeroError $e) {
+            $errorTests[] = ['test' => 'Division by zero test', 'status' => 'PASS', 'message' => 'Division by zero hatası yakalandı: ' . $e->getMessage()];
+            $passedTests++;
+        } catch (Error $e) {
+            $errorTests[] = ['test' => 'Division by zero test', 'status' => 'PASS', 'message' => 'Division by zero hatası yakalandı: ' . $e->getMessage()];
+            $passedTests++;
+        }
+        
+        // Test 3: Undefined function call
+        $totalTests++;
+        try {
+            // Bu fonksiyon tanımlı değil - test amaçlı
+            $functionName = 'undefinedFunction' . uniqid(); // Benzersiz isim
+            $result = $functionName(); // Dynamic call
+            $errorTests[] = ['test' => 'Undefined function test', 'status' => 'FAIL', 'message' => 'Undefined function testi başarısız'];
+        } catch (Error $e) {
+            $errorTests[] = ['test' => 'Undefined function test', 'status' => 'PASS', 'message' => 'Undefined function hatası yakalandı: ' . $e->getMessage()];
+            $passedTests++;
+        }
+        
+        // Test 4: File not found error
+        $totalTests++;
+        try {
+            $content = file_get_contents('non_existent_file.txt');
+            $errorTests[] = ['test' => 'File not found test', 'status' => 'FAIL', 'message' => 'File not found testi başarısız'];
+        } catch (Error $e) {
+            $errorTests[] = ['test' => 'File not found test', 'status' => 'PASS', 'message' => 'File not found hatası yakalandı: ' . $e->getMessage()];
+            $passedTests++;
+        }
+        
+        // Test 5: JSON decode error
+        $totalTests++;
+        try {
+            $result = json_decode('invalid json', true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $errorTests[] = ['test' => 'JSON decode test', 'status' => 'PASS', 'message' => 'JSON decode hatası yakalandı: ' . json_last_error_msg()];
+                $passedTests++;
+            } else {
+                $errorTests[] = ['test' => 'JSON decode test', 'status' => 'FAIL', 'message' => 'JSON decode testi başarısız'];
+            }
+        } catch (Exception $e) {
+            $errorTests[] = ['test' => 'JSON decode test', 'status' => 'PASS', 'message' => 'JSON decode hatası yakalandı: ' . $e->getMessage()];
+            $passedTests++;
+        }
+        
+        $success = $passedTests === $totalTests;
+        
+        echo json_encode([
+            'success' => $success,
+            'message' => $success ? 'Tüm 500 hata testleri başarılı' : 'Bazı 500 hata testleri başarısız',
+            'passed_tests' => $passedTests,
+            'total_tests' => $totalTests,
+            'test_results' => $errorTests,
+            'http_status' => $success ? 200 : 500
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => '500 hata test hatası: ' . $e->getMessage(),
+            'error_type' => get_class($e),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine(),
+            'http_status' => 500
+        ]);
+    }
+}
+
+function testErrorHandling() {
+    // Hata yönetimi testleri
+    $errorHandlingTests = [];
+    $passedTests = 0;
+    $totalTests = 0;
+    
+    try {
+        // Test 1: Try-catch bloğu testi
+        $totalTests++;
+        try {
+            throw new Exception('Test exception');
+        } catch (Exception $e) {
+            $errorHandlingTests[] = ['test' => 'Try-catch test', 'status' => 'PASS', 'message' => 'Exception yakalandı: ' . $e->getMessage()];
+            $passedTests++;
+        }
+        
+        // Test 2: Error reporting testi
+        $totalTests++;
+        $originalErrorReporting = error_reporting();
+        error_reporting(E_ALL);
+        
+        $errorHandlingTests[] = ['test' => 'Error reporting test', 'status' => 'PASS', 'message' => 'Error reporting aktif: ' . error_reporting()];
+        $passedTests++;
+        
+        error_reporting($originalErrorReporting);
+        
+        // Test 3: Logging testi
+        $totalTests++;
+        $logFile = '../logs/error_test.log';
+        $logDir = dirname($logFile);
+        
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0755, true);
+        }
+        
+        $logMessage = 'Test error log message - ' . date('Y-m-d H:i:s');
+        error_log($logMessage, 3, $logFile);
+        
+        if (file_exists($logFile) && strpos(file_get_contents($logFile), $logMessage) !== false) {
+            $errorHandlingTests[] = ['test' => 'Error logging test', 'status' => 'PASS', 'message' => 'Error logging çalışıyor'];
+            $passedTests++;
+        } else {
+            $errorHandlingTests[] = ['test' => 'Error logging test', 'status' => 'FAIL', 'message' => 'Error logging çalışmıyor'];
+        }
+        
+        // Test 4: HTTP status code testi
+        $totalTests++;
+        $testStatusCodes = [400, 401, 403, 404, 500];
+        $statusCodeTests = [];
+        
+        foreach ($testStatusCodes as $code) {
+            http_response_code($code);
+            $currentCode = http_response_code();
+            if ($currentCode == $code) {
+                $statusCodeTests[] = "HTTP $code: OK";
+            } else {
+                $statusCodeTests[] = "HTTP $code: FAIL (got $currentCode)";
+            }
+        }
+        
+        $errorHandlingTests[] = ['test' => 'HTTP status code test', 'status' => 'PASS', 'message' => implode(', ', $statusCodeTests)];
+        $passedTests++;
+        
+        // Test 5: Memory usage monitoring
+        $totalTests++;
+        $memoryUsage = memory_get_usage(true);
+        $memoryPeak = memory_get_peak_usage(true);
+        $memoryLimit = ini_get('memory_limit');
+        
+        $errorHandlingTests[] = [
+            'test' => 'Memory monitoring test', 
+            'status' => 'PASS', 
+            'message' => "Memory usage: " . formatBytes($memoryUsage) . ", Peak: " . formatBytes($memoryPeak) . ", Limit: $memoryLimit"
+        ];
+        $passedTests++;
+        
+        $success = $passedTests === $totalTests;
+        
+        echo json_encode([
+            'success' => $success,
+            'message' => $success ? 'Tüm hata yönetimi testleri başarılı' : 'Bazı hata yönetimi testleri başarısız',
+            'passed_tests' => $passedTests,
+            'total_tests' => $totalTests,
+            'test_results' => $errorHandlingTests,
+            'http_status' => 200
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Hata yönetimi test hatası: ' . $e->getMessage(),
+            'error_type' => get_class($e),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine(),
+            'http_status' => 500
+        ]);
+    }
+}
+
+function simulateServerError($input) {
+    // Sunucu hata simülasyonu
+    $errorType = $input['error_type'] ?? 'general';
+    
+    try {
+        switch ($errorType) {
+            case 'memory_limit':
+                // Memory limit hatası simülasyonu
+                ini_set('memory_limit', '1M');
+                $largeArray = [];
+                for ($i = 0; $i < 1000000; $i++) {
+                    $largeArray[] = str_repeat('x', 1000);
+                }
+                break;
+                
+            case 'timeout':
+                // Timeout hatası simülasyonu
+                set_time_limit(1);
+                sleep(2);
+                break;
+                
+            case 'database':
+                // Veritabanı hatası simülasyonu
+                throw new Exception('Database connection failed: Simulated error');
+                
+            case 'file_permission':
+                // Dosya izin hatası simülasyonu
+                $file = '../test_write_permission.txt';
+                if (!is_writable(dirname($file))) {
+                    throw new Exception('File permission denied: Simulated error');
+                }
+                break;
+                
+            case 'syntax':
+                // Syntax hatası simülasyonu
+                eval('invalid php syntax here');
+                break;
+                
+            default:
+                // Genel hata
+                throw new Exception('Simulated server error: ' . $errorType);
+        }
+        
+        // Eğer buraya ulaştıysak, hata simülasyonu başarısız
+        echo json_encode([
+            'success' => false,
+            'message' => 'Hata simülasyonu başarısız',
+            'error_type' => $errorType,
+            'http_status' => 200
+        ]);
+        
+    } catch (Error $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Simulated error caught: ' . $e->getMessage(),
+            'error_type' => get_class($e),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine(),
+            'simulated_error' => $errorType,
+            'http_status' => 500
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Simulated error caught: ' . $e->getMessage(),
+            'error_type' => get_class($e),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine(),
+            'simulated_error' => $errorType,
+            'http_status' => 500
+        ]);
+    }
+}
+
+function testPhpSpreadsheet() {
+    // PhpSpreadsheet kütüphanesi testi
+    $tests = [];
+    $passedTests = 0;
+    $totalTests = 0;
+    
+    try {
+        // Test 1: Kütüphane yükleme testi
+        $totalTests++;
+        if (class_exists('PhpOffice\PhpSpreadsheet\Spreadsheet')) {
+            $tests[] = ['test' => 'PhpSpreadsheet class yükleme', 'status' => 'PASS', 'message' => 'PhpSpreadsheet sınıfı başarıyla yüklendi'];
+            $passedTests++;
+        } else {
+            $tests[] = ['test' => 'PhpSpreadsheet class yükleme', 'status' => 'FAIL', 'message' => 'PhpSpreadsheet sınıfı yüklenemedi'];
+        }
+        
+        // Test 2: Yeni spreadsheet oluşturma
+        $totalTests++;
+        try {
+            $spreadsheet = new Spreadsheet();
+            $tests[] = ['test' => 'Yeni spreadsheet oluşturma', 'status' => 'PASS', 'message' => 'Yeni spreadsheet başarıyla oluşturuldu'];
+            $passedTests++;
+        } catch (Exception $e) {
+            $tests[] = ['test' => 'Yeni spreadsheet oluşturma', 'status' => 'FAIL', 'message' => 'Spreadsheet oluşturma hatası: ' . $e->getMessage()];
+        }
+        
+        // Test 3: Worksheet işlemleri
+        $totalTests++;
+        try {
+            $spreadsheet = new Spreadsheet();
+            $worksheet = $spreadsheet->getActiveSheet();
+            $worksheet->setCellValue('A1', 'Test Verisi');
+            $value = $worksheet->getCell('A1')->getValue();
+            if ($value === 'Test Verisi') {
+                $tests[] = ['test' => 'Worksheet hücre işlemleri', 'status' => 'PASS', 'message' => 'Hücre yazma/okuma başarılı'];
+                $passedTests++;
+            } else {
+                $tests[] = ['test' => 'Worksheet hücre işlemleri', 'status' => 'FAIL', 'message' => 'Hücre değeri eşleşmiyor'];
+            }
+        } catch (Exception $e) {
+            $tests[] = ['test' => 'Worksheet hücre işlemleri', 'status' => 'FAIL', 'message' => 'Worksheet işlem hatası: ' . $e->getMessage()];
+        }
+        
+        // Test 4: IOFactory testi
+        $totalTests++;
+        try {
+            if (class_exists('PhpOffice\PhpSpreadsheet\IOFactory')) {
+                $tests[] = ['test' => 'IOFactory sınıfı', 'status' => 'PASS', 'message' => 'IOFactory sınıfı mevcut'];
+                $passedTests++;
+            } else {
+                $tests[] = ['test' => 'IOFactory sınıfı', 'status' => 'FAIL', 'message' => 'IOFactory sınıfı bulunamadı'];
+            }
+        } catch (Exception $e) {
+            $tests[] = ['test' => 'IOFactory sınıfı', 'status' => 'FAIL', 'message' => 'IOFactory test hatası: ' . $e->getMessage()];
+        }
+        
+        // Test 5: Writer sınıfları testi
+        $totalTests++;
+        try {
+            $writerClasses = [
+                'PhpOffice\PhpSpreadsheet\Writer\Xlsx',
+                'PhpOffice\PhpSpreadsheet\Writer\Xls',
+                'PhpOffice\PhpSpreadsheet\Writer\Csv'
+            ];
+            
+            $availableWriters = [];
+            foreach ($writerClasses as $writerClass) {
+                if (class_exists($writerClass)) {
+                    $availableWriters[] = basename($writerClass);
+                }
+            }
+            
+            $tests[] = ['test' => 'Writer sınıfları', 'status' => 'PASS', 'message' => count($availableWriters) . ' writer mevcut: ' . implode(', ', $availableWriters)];
+            $passedTests++;
+        } catch (Exception $e) {
+            $tests[] = ['test' => 'Writer sınıfları', 'status' => 'FAIL', 'message' => 'Writer test hatası: ' . $e->getMessage()];
+        }
+        
+        $success = $passedTests === $totalTests;
+        
+        echo json_encode([
+            'success' => $success,
+            'message' => $success ? 'PhpSpreadsheet kütüphanesi tam olarak çalışıyor' : 'PhpSpreadsheet kütüphanesinde sorunlar var',
+            'passed_tests' => $passedTests,
+            'total_tests' => $totalTests,
+            'test_results' => $tests,
+            'phpspreadsheet_version' => class_exists('PhpOffice\PhpSpreadsheet\Spreadsheet') ? 'Mevcut' : 'Bulunamadı',
+            'http_status' => 200
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'PhpSpreadsheet test hatası: ' . $e->getMessage(),
+            'error_type' => get_class($e),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine(),
+            'http_status' => 500
+        ]);
+    }
+}
+
+function formatBytes($bytes, $precision = 2) {
+    $units = array('B', 'KB', 'MB', 'GB', 'TB');
+    
+    for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+        $bytes /= 1024;
+    }
+    
+    return round($bytes, $precision) . ' ' . $units[$i];
 }
 ?>

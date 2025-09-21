@@ -76,6 +76,8 @@ try {
     <link href="css/dashboard.css?v=<?php echo time(); ?>" rel="stylesheet">
     <link href="css/pc-update.css?v=<?php echo time(); ?>" rel="stylesheet">
     <link href="css/student_cards.css?v=<?php echo time(); ?>" rel="stylesheet">
+
+    <link rel="icon" href="../assets/image/logo/myologo.png" type="image/x-icon" />
     
     <!-- Student Year Filter CSS -->
     <style>

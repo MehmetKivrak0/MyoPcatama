@@ -36,6 +36,9 @@ if ($_POST) {
     <title>Kayıt Ol - MyOPC</title>
     <link rel="stylesheet" href="../assets/css/iambatman.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" href="../assets/image/logo/myologo.png" type="image/x-icon" />
+
+    
 </head>
 <body>
     <!-- Sol taraf - Branding -->

@@ -1388,8 +1388,9 @@ function performAssignment() {
                 const checkbox = document.querySelector(`input[value="${studentId}"]`);
                 if (checkbox) {
                     const label = checkbox.closest('label');
-                    const nameElement = label.querySelector('.student-name-simple');
-                    const detailsElement = label.querySelector('.student-details-simple');
+                    if (label) {
+                        const nameElement = label.querySelector('.student-name-simple');
+                        const detailsElement = label.querySelector('.student-details-simple');
                     
                     if (nameElement && detailsElement) {
                         const studentInfo = {
@@ -1416,6 +1417,9 @@ function performAssignment() {
                         });
                         
                         selectedStudents.push(studentInfo);
+                    }
+                    } else {
+                        console.warn(`Label not found for checkbox with value: ${studentId}`);
                     }
                 }
             });

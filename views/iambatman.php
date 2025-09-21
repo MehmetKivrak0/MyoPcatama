@@ -45,6 +45,8 @@ if ($_POST) {
     <link rel="stylesheet" href="../assets/css/iambatman.css">
     <link rel="stylesheet" href="../assets/css/photo-fix.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" href="../assets/image/logo/myologo.png" type="image/x-icon" />
+
 </head>
 <body>
     <!-- Sol taraf - Branding -->
@@ -114,9 +116,7 @@ if ($_POST) {
                 
                 <button type="submit" class="btn-primary">GİRİŞ YAP</button>
                 
-                <div class="form-footer">
-                    <p>Hesabınız yok mu? <a href="iamloki.php" class="link">Kayıt olun</a></p>
-                </div>
+                
             </form>
         </div>
     </div>
